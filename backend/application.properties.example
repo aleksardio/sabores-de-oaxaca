@@ -1,0 +1,6 @@
+# Ejemplo de variables de entorno; no incluir credenciales reales.
+# DB_URL=jdbc:mysql://localhost:3306/sabores_oaxaca?useUnicode=true&characterEncoding=UTF-8&serverTimezone=UTC
+# DB_USERNAME=nombre_de_usuario
+# DB_PASSWORD=contraseña_local
+# La configuración activa se encuentra en src/main/resources/application.properties.
+# Flyway está deshabilitado hasta contar con migraciones revisadas.
