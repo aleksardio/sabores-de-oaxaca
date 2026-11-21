@@ -1,8 +1,11 @@
 # Sabores de Oaxaca · Frontend
 
-Aplicación inicial en JavaScript con React, Vite y React Router. El diseño es
-provisional y se ajustará al prototipo de Figma. No requiere iniciar el backend:
-el catálogo usa datos locales y las pantallas de acceso no procesan credenciales.
+Aplicación en JavaScript con React, Vite y React Router. El Inicio toma como
+referencia el frame «01 · Inicio público» de Figma; las composiciones de tablet
+y móvil son adaptaciones del diseño de escritorio. Las ilustraciones se
+recrean con CSS y las fuentes Fraunces e Inter se cargan desde Google Fonts.
+No requiere iniciar el backend: el catálogo usa datos locales y las pantallas
+de acceso no procesan credenciales.
 
 ## Instalar y ejecutar
 
@@ -21,7 +24,7 @@ Abre la URL que indique Vite (habitualmente `http://localhost:5173`).
 
 | Ruta | Qué comprobar |
 | --- | --- |
-| `/` | La presentación y el enlace «Explorar recetas». |
+| `/` | La portada, «Explorar recetas», las tres tarjetas destacadas y sus enlaces «Ver receta». |
 | `/recetas` | El catálogo y los enlaces a cada receta. |
 | `/recetas/tlayuda` | El detalle provisional y el enlace de vuelta. |
 | `/recetas/no-existe` | El mensaje «Receta no encontrada». |
@@ -31,6 +34,10 @@ Abre la URL que indique Vite (habitualmente `http://localhost:5173`).
 
 Prueba también recargar directamente un detalle y navegar con una ventana
 estrecha: el menú debe ajustarse y las tarjetas deben reorganizarse.
+
+«Tradiciones» y «Conocer las regiones» están deshabilitados hasta que exista la
+página de tradiciones. «Compartir receta» y «Compartir mi receta» esperan la
+pantalla de publicación. La página de registro sigue enlazada desde `/login`.
 
 ## Comprobaciones locales
 
