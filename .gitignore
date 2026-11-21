@@ -1,0 +1,19 @@
+# Private configuration and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Java and Maven
+backend/target/
+*.class
+
+# Node / React
+frontend/node_modules/
+frontend/dist/
+
+# Editors and OS
+.idea/
+.vscode/
+.DS_Store
