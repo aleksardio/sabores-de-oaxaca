@@ -5,7 +5,8 @@ import Navbar from '../components/Navbar.jsx'
 export default function MainLayout() {
   const isHome = useMatch('/')
   const isCatalog = useMatch('/recetas')
-  const pageClass = isHome ? ' page--home' : isCatalog ? ' page--catalog' : ''
+  const isRecipeDetail = useMatch('/recetas/:id')
+  const pageClass = isHome ? ' page--home' : isCatalog ? ' page--catalog' : isRecipeDetail ? ' page--recipe-detail' : ''
 
   return (
     <div className="site-layout">
