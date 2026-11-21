@@ -1,4 +1,5 @@
 import { Link } from 'react-router'
+import RecipeCard, { DishIllustration } from '../components/RecipeCard.jsx'
 import '../styles/home.css'
 
 const featuredRecipes = [
@@ -26,34 +27,6 @@ const featuredRecipes = [
   },
 ]
 
-// The Figma artwork uses editable shapes and gradients rather than photos.
-function DishIllustration({ label, tone = 'gold' }) {
-  return (
-    <div className={`dish-art dish-art--${tone}`} aria-hidden={tone !== 'hero' ? true : undefined}>
-      <span className="dish-art__plate" />
-      <span className="dish-art__dot" />
-      <span>{label}</span>
-    </div>
-  )
-}
-
-function FeaturedRecipe({ recipe }) {
-  return (
-    <li className="featured-card">
-      <DishIllustration label={recipe.title} tone={recipe.tone} />
-      <div className="featured-card__tags">
-        <span>{recipe.region}</span>
-        <span>{recipe.time}</span>
-      </div>
-      <h3>{recipe.title}</h3>
-      <p>{recipe.description}</p>
-      <Link className="site-button featured-card__link" to={`/recetas/${recipe.id}`} aria-label={`Ver receta de ${recipe.title}`}>
-        Ver receta <span aria-hidden="true">→</span>
-      </Link>
-    </li>
-  )
-}
-
 export default function HomePage() {
   return (
     <>
@@ -71,13 +44,13 @@ export default function HomePage() {
             </button>
           </div>
         </div>
-        <DishIllustration label="Mole negro · tradición viva" tone="hero" />
+        <DishIllustration label="Mole negro · tradición viva" tone="hero" decorative={false} />
       </section>
 
       <section className="home-featured" aria-labelledby="featured-title">
         <h2 id="featured-title">Los sabores que unen a nuestra gente</h2>
         <ul className="featured-grid">
-          {featuredRecipes.map((recipe) => <FeaturedRecipe key={recipe.id} recipe={recipe} />)}
+          {featuredRecipes.map((recipe) => <RecipeCard key={recipe.id} {...recipe} />)}
         </ul>
       </section>
 
