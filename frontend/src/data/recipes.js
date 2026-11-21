@@ -14,4 +14,9 @@ export const recipes = [
     name: 'Tejate',
     description: 'Bebida tradicional oaxaqueña a base de maíz y cacao.',
   },
+  {
+    id: 'tamales-de-chepil',
+    name: 'Tamales de chepil',
+    description: 'Cocina de nuestras abuelas.',
+  },
 ]
