@@ -1,0 +1,174 @@
+:root {
+  font-family: system-ui, sans-serif;
+  line-height: 1.6;
+  color: #2e241e;
+  background: #fffaf3;
+  --accent: #8d3828;
+  --border: #e5d6c8;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+a {
+  color: var(--accent);
+  text-underline-offset: 0.2em;
+}
+
+a:focus-visible {
+  outline: 3px solid #2f6050;
+  outline-offset: 3px;
+}
+
+h1,
+h2 {
+  line-height: 1.2;
+  margin-block: 0 0.5em;
+}
+
+h1 {
+  font-size: clamp(2rem, 5vw, 3.5rem);
+}
+
+.site-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.container {
+  width: min(70rem, calc(100% - 2rem));
+  margin-inline: auto;
+}
+
+.site-header,
+.site-footer {
+  background: #fff;
+}
+
+.site-header {
+  border-bottom: 1px solid var(--border);
+}
+
+.header-content,
+.site-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.header-content {
+  justify-content: space-between;
+  gap: 0.5rem 1.5rem;
+  padding-block: 0.75rem;
+}
+
+.brand {
+  font-size: 1.2rem;
+  font-weight: 750;
+  text-decoration: none;
+}
+
+.site-nav {
+  gap: 0.25rem;
+}
+
+.site-nav a {
+  padding: 0.5rem 0.65rem;
+  border-radius: 0.35rem;
+  text-decoration: none;
+}
+
+.site-nav a:hover,
+.site-nav a[aria-current='page'] {
+  background: #f5e4d8;
+  text-decoration: underline;
+}
+
+.page {
+  flex: 1;
+  padding-block: clamp(1.5rem, 5vw, 4rem);
+}
+
+.page p {
+  max-width: 65ch;
+}
+
+.page section > a:first-child + h1 {
+  margin-top: 1rem;
+}
+
+.hero {
+  padding: clamp(1.25rem, 5vw, 4rem);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: #f5e4d8;
+}
+
+.eyebrow {
+  margin-top: 0;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.button {
+  display: inline-block;
+  padding: 0.65rem 1rem;
+  border-radius: 0.4rem;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.button:hover {
+  text-decoration: underline;
+}
+
+.recipe-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  gap: 1rem;
+  padding: 0;
+  list-style: none;
+}
+
+.card {
+  padding: 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: 0.65rem;
+  background: #fff;
+}
+
+.card h2 {
+  font-size: 1.25rem;
+}
+
+.card p {
+  margin-bottom: 0;
+}
+
+.site-footer {
+  padding-block: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.site-footer p {
+  margin: 0;
+}
+
+@media (max-width: 40rem) {
+  .header-content {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .site-nav {
+    margin-inline-start: -0.65rem;
+  }
+}
