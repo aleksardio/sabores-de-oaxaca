@@ -6,8 +6,8 @@ detalle toman como referencia los frames «01 · Inicio público»,
 Las composiciones de tablet y móvil son adaptaciones del escritorio.
 Las ilustraciones se recrean con CSS y las fuentes Fraunces e Inter se cargan
 desde Google Fonts.
-No requiere iniciar el backend: el catálogo usa datos locales y las pantallas
-de acceso no procesan credenciales.
+No requiere iniciar el backend: el catálogo usa datos locales y los formularios
+de autenticación solo validan entradas en el navegador.
 
 ## Instalar y ejecutar
 
@@ -30,8 +30,9 @@ Abre la URL que indique Vite (habitualmente `http://localhost:5173`).
 | `/recetas` | El catálogo, la búsqueda, los filtros, las páginas de seis recetas y los enlaces a cada detalle. |
 | `/recetas/tlayuda` | Ingredientes, preparación, base de dos porciones y enlace de vuelta. |
 | `/recetas/no-existe` | El mensaje «Receta no encontrada» y el enlace al catálogo. |
-| `/login` | El aviso de que el inicio de sesión aún no está disponible. |
-| `/registro` | El aviso de que el registro aún no está disponible. |
+| `/login` | Acceso con correo y contraseña, mostrar u ocultar contraseña y enlaces a alta y recuperación. |
+| `/registro` | Alta con nombre visible, correo, contraseña y confirmación. |
+| `/recuperar-contrasena` | Solicitud de recuperación por correo y enlace de regreso al login. |
 | `/no-existe` | La página de ruta desconocida y el enlace al inicio. |
 
 Prueba también recargar directamente un detalle y navegar con una ventana
@@ -40,7 +41,33 @@ estrecha: el menú debe ajustarse y las tarjetas deben reorganizarse.
 «Tradiciones», «Conocer las regiones» y «Por región» están deshabilitados
 hasta que exista la página de tradiciones. El selector «Región» sí filtra el
 catálogo. «Compartir receta» y «Compartir mi receta» esperan la pantalla de
-publicación. La página de registro sigue enlazada desde `/login`.
+publicación.
+
+### Formularios de autenticación
+
+Las tres rutas usan un layout propio inspirado en los frames 06, 07 y 08
+de Figma, sin la cabecera ni el pie públicos. En pantallas estrechas el
+panel de marca se compacta y el formulario queda en una columna.
+
+- En login, envía los campos vacíos, prueba un correo sin `@` y usa
+  **Mostrar/Ocultar contraseña** con el teclado.
+- En registro, prueba los campos vacíos, contraseñas diferentes, un nombre
+  de 101 caracteres o un correo de 255. Los máximos son 100 y 254,
+  respectivamente. No se solicita un rol ni se exige una composición de
+  contraseña pendiente de acuerdo con Aleks.
+- En recuperación, prueba un correo vacío y uno mal formado. Regresa a login
+  y recorre los enlaces a las tres pantallas y al inicio.
+- Al corregir un error, su mensaje debe desaparecer. Un envío válido solo
+  anuncia que la función estará disponible cuando se conecte el servidor.
+  No se inicia sesión, crea una cuenta ni envía un correo. No hay peticiones,
+  tokens ni almacenamiento de credenciales; las contraseñas se limpian tras
+  un envío válido.
+- Revisa las tres rutas a **320, 390, 768 y 1440 px**: sin desplazamiento
+  horizontal, con las acciones accesibles y scroll vertical cuando se necesite.
+
+Para la integración faltan el contrato de la API, la política de contraseña,
+el manejo de sesión y destinos según permisos del servidor, y el flujo de
+restablecimiento desde un enlace de recuperación.
 
 ### Búsqueda y filtros del catálogo
 
@@ -82,7 +109,7 @@ demostrativas, no versiones históricas verificadas.
 ## Comprobaciones locales
 
 ```sh
-npm test         # Cálculo exacto, HALF_UP, cero aproximado, AL_GUSTO y datos locales
+npm test         # Validación de formularios, porciones y datos locales
 npm run build    # Genera dist/
 npm run lint     # Revisa el código con ESLint
 npm run preview  # Sirve la compilación localmente después de build
