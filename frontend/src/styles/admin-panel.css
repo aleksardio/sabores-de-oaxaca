@@ -1,0 +1,110 @@
+.admin-layout [data-state="ACTIVA"] { --state-bg: #e8f2e9; --state-ink: #245d44; }
+.admin-layout [data-state="BAJA"] { --state-bg: #fae8e1; --state-ink: #913e2d; }
+.admin-layout [data-state="ROL"] { --state-bg: #f4ecdf; --state-ink: #655041; }
+
+.admin-eyebrow {
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.admin-layout .cook-view header .admin-eyebrow { margin: 0 0 0.35rem; }
+
+.admin-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-table {
+  font-size: 0.875rem;
+}
+
+.admin-table tbody tr:nth-child(even) { background: #fcf9f4; }
+.admin-table .site-button { white-space: normal; }
+.admin-mobile-label { display: none; }
+
+.admin-facts {
+  display: grid;
+  gap: 0.65rem;
+  margin: 0;
+}
+
+.admin-facts--grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
+  gap: 0.85rem;
+}
+
+.admin-facts dt { font-weight: 700; }
+.admin-facts dd { margin: 0; }
+
+.admin-form {
+  display: grid;
+  gap: 0.75rem;
+  max-width: 43rem;
+}
+
+.admin-form p, .admin-guidance p:last-child { margin: 0; }
+.admin-form [role="status"]:empty { margin-bottom: -0.75rem; }
+.admin-form > .cook-muted { font-size: 0.875rem; }
+.admin-action h2:focus { outline: 3px solid var(--green); outline-offset: 3px; }
+
+.admin-note, .admin-preview {
+  padding: 0.75rem 0.9rem;
+  border-inline-start: 4px solid var(--accent);
+  border-radius: 0.45rem;
+  background: var(--hero-surface);
+}
+
+.admin-preview {
+  border-color: var(--green);
+  background: #edf2e9;
+}
+
+.admin-preview h3, .admin-catalog-list h3 {
+  margin: 0;
+  font-family: var(--font-display);
+}
+
+.admin-preview h3 { margin-bottom: 0.5rem; }
+.admin-justification { white-space: pre-wrap; }
+
+.admin-catalog-grid {
+  display: grid;
+  align-items: start;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr));
+  gap: 1rem;
+}
+
+.admin-catalog-list {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-catalog-list li {
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 0.65rem;
+  background: #fcf9f4;
+}
+
+.admin-catalog-list p { margin: 0; font-size: 0.875rem; }
+.admin-catalog-id { color: var(--accent); font-weight: 700; }
+
+@media (max-width: 42rem) {
+  .admin-mobile-label {
+    display: block;
+    margin-bottom: 0.15rem;
+    color: var(--cook-muted);
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+}
