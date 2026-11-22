@@ -46,7 +46,70 @@ Abre la URL que indique Vite (habitualmente `http://localhost:5173`).
 Prueba también recargar directamente un detalle y navegar con una ventana
 estrecha: el menú debe ajustarse y las tarjetas deben reorganizarse.
 
-«Compartir receta» y «Compartir mi receta» esperan la pantalla de publicación.
+«Compartir receta» y «Compartir mi receta» siguen deshabilitados hasta contar
+con la integración de publicación. El pie público ofrece un enlace separado
+para **Ver demostración del panel**.
+
+### Panel del cocinero (demostración visual)
+
+| Ruta | Qué muestra |
+| --- | --- |
+| `/cocinero` | Redirige a «Mis recetas». |
+| `/cocinero/recetas` | Cinco ejemplos, resumen por estado y filtros locales por estado y título. |
+| `/cocinero/recetas/nueva` | Formulario vacío, verificación de requisitos y vista previa en la misma pantalla. |
+| `/cocinero/recetas/:id/editar` | Editor en memoria si el estado lo permite; en los demás estados abre en modo lectura. |
+| `/cocinero/recetas/:id/vista-previa` | Vista previa del ejemplo original. Si el ID no existe, muestra «Receta no encontrada». |
+
+Los ejemplos de `src/data/demoCookRecipes.js` cubren `BORRADOR`, `PENDIENTE`,
+`PUBLICADA`, `RECHAZADA` y `ARCHIVADA`. No son las recetas del catálogo público
+ni pertenecen a cuentas o autores de demostración. Las categorías de
+`src/data/recipeEditorOptions.js` son locales y se basan en el catálogo actual,
+no en una consulta a MySQL. Las rutas no están protegidas ni asignan roles.
+
+Puedes editar en memoria ejemplos en `BORRADOR` y practicar correcciones en
+`RECHAZADA`, sin reabrirlo ni cambiar su estado. `PENDIENTE` queda en lectura
+durante la revisión; `PUBLICADA` requiere retiro a `BORRADOR` en el servidor;
+`ARCHIVADA` requiere que moderación la restaure a `PENDIENTE` para revisar de
+nuevo. Guardar y enviar a revisión están deshabilitados. El formulario conserva
+los cambios al alternar con la vista previa, pero los descarta al salir o
+recargar. No usa almacenamiento del navegador ni API, y nada se publica o
+agrega al catálogo.
+
+**Figma:** se revisaron los frames 09 «Mis recetas», 10 «Publicar receta», 11
+«Previsualización» y 12 «Editar receta». Se conservan la barra lateral café,
+el fondo crema, las tarjetas de resumen, la tabla y la ilustración de la
+vista previa. En móvil la navegación pasa arriba y la tabla se apila.
+Se omitieron la cuenta, las notificaciones, los controles de sesión y las
+cargas multimedia; se reemplazaron las métricas del prototipo por conteos
+locales reales de los ejemplos. Los campos siguen el modelo de datos: tipo
+y categorías separados, preparación por líneas y filas editables de ingredientes.
+
+**Pruebas manuales:**
+
+- Entra desde el pie público, filtra cada estado y añade una búsqueda que no
+  coincida. Limpia los filtros y prueba el enlace de regreso al sitio público.
+- Abre **Nueva receta**, comprueba los requisitos con campos vacíos y verifica
+  que el foco vaya a **Título**. Añade y quita ingredientes; prueba una cantidad
+  negativa y cambia la unidad a **Al gusto** (la cantidad debe vaciarse).
+  Completa los campos, comprueba de nuevo y revisa que guardar y enviar sigan
+  deshabilitados. Alterna con **Vista previa** y comprueba que los datos siguen
+  en el formulario.
+- Edita `demo-tostadas-calabaza` y recarga: debe restaurarse el título original.
+  Abre `demo-dulce-amaranto` para practicar correcciones. Comprueba el modo
+  lectura de `demo-infusion-guayaba`, `demo-quesadillas-flor` y
+  `demo-caldo-garbanzos`, incluso al entrar por `/editar`. Prueba el ID
+  `no-existe` en edición y vista previa.
+- Revisa listado, creación, edición y vista previa a **320, 390, 768 y 1440 px**;
+  las filas de ingredientes deben adaptarse sin desplazamiento horizontal.
+  Comprueba por teclado el foco y la validación, y abre las rutas públicas y
+  de autenticación para confirmar que siguen funcionando.
+
+**Integración con Aleks:** conectar sesión y permisos reales (cuenta activa,
+rol y propiedad verificados por el servidor), catálogos e identificadores
+reales, listado y lectura de recetas propias, guardado, envío y transiciones
+editoriales. Falta acordar el contrato de API, el manejo de errores y la
+integración de multimedia. El servidor deberá validar todos los campos y
+asignar el autor; la comprobación local no reemplaza esa validación.
 
 ### Tradiciones y regiones
 
@@ -170,7 +233,7 @@ demostrativas, no versiones históricas verificadas.
 ## Comprobaciones locales
 
 ```sh
-npm test         # Validación de formularios, porciones, recetas, regiones y autores
+npm test         # Formularios, porciones, recetas, regiones, autores y panel del cocinero
 npm run build    # Genera dist/
 npm run lint     # Revisa el código con ESLint
 npm run preview  # Sirve la compilación localmente después de build
