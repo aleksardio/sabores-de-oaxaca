@@ -7,7 +7,7 @@ Aplicación web full stack para descubrir, compartir y moderar recetas tradicion
 ## Equipo
 
 - **Aleks (integrante 1):** backend con Spring Boot, MySQL, seguridad, integraciones y despliegue.
-- **Chanclas (integrante 2):** frontend con React, experiencia de usuario, diseño responsive y Figma.
+- **Alexis (integrante 2):** frontend con React, experiencia de usuario, diseño responsive y Figma.
 
 Ambos integrantes participarán en la integración, revisión de cambios, pruebas y documentación. Los commits deberán reflejar trabajo real y verificable de cada uno.
 
