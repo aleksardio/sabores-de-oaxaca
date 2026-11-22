@@ -1,10 +1,14 @@
 import { Route, Routes } from 'react-router'
 import AuthLayout from '../layouts/AuthLayout.jsx'
 import MainLayout from '../layouts/MainLayout.jsx'
+import AuthorProfilePage from '../pages/AuthorProfilePage.jsx'
+import AuthorsPage from '../pages/AuthorsPage.jsx'
+import FavoritesPage from '../pages/FavoritesPage.jsx'
 import ForgotPasswordPage from '../pages/ForgotPasswordPage.jsx'
 import HomePage from '../pages/HomePage.jsx'
 import LoginPage from '../pages/LoginPage.jsx'
 import NotFoundPage from '../pages/NotFoundPage.jsx'
+import ProfilePage from '../pages/ProfilePage.jsx'
 import RecipeDetailPage from '../pages/RecipeDetailPage.jsx'
 import RecipesPage from '../pages/RecipesPage.jsx'
 import RegisterPage from '../pages/RegisterPage.jsx'
@@ -18,6 +22,10 @@ export default function AppRoutes() {
         <Route path="recetas" element={<RecipesPage />} />
         <Route path="recetas/:id" element={<RecipeDetailPage />} />
         <Route path="tradiciones" element={<TraditionsPage />} />
+        <Route path="perfil" element={<ProfilePage />} />
+        <Route path="autores" element={<AuthorsPage />} />
+        <Route path="autores/:id" element={<AuthorProfilePage />} />
+        <Route path="favoritos" element={<FavoritesPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
       <Route element={<AuthLayout />}>

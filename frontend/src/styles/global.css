@@ -186,6 +186,7 @@ a.site-button:hover {
   align-items: center;
   justify-content: space-between;
   gap: 8px 24px;
+  flex-wrap: wrap;
   width: min(1308px, calc(100% - 2 * clamp(16px, 4.583vw, 66px)));
   padding-block: 19px;
 }
@@ -194,8 +195,27 @@ a.site-button:hover {
   margin: 0;
 }
 
-.site-footer p + p {
+.footer-content > p:last-child {
   color: var(--border);
+}
+
+.footer-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+}
+
+.footer-nav a {
+  padding-block: 0.35rem;
+  color: inherit;
+}
+
+.footer-nav a:focus-visible {
+  outline-color: var(--hero-surface);
+}
+
+.footer-nav a[aria-current="page"] {
+  font-weight: 700;
 }
 
 @media (max-width: 56rem) {
@@ -213,9 +233,5 @@ a.site-button:hover {
 @media (max-width: 39rem) {
   .header-content {
     grid-template-columns: minmax(0, 1fr);
-  }
-
-  .footer-content {
-    flex-wrap: wrap;
   }
 }
