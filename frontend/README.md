@@ -111,6 +111,74 @@ editoriales. Falta acordar el contrato de API, el manejo de errores y la
 integración de multimedia. El servidor deberá validar todos los campos y
 asignar el autor; la comprobación local no reemplaza esa validación.
 
+### Panel de moderación (demostración visual)
+
+| Ruta | Qué muestra |
+| --- | --- |
+| `/moderador` | Redirige a `/moderador/recetas`. |
+| `/moderador/recetas` | Cola de revisión, conteos por estado, filtro y búsqueda por título. |
+| `/moderador/recetas/:id` | Autor ficticio, receta de solo lectura y preparación de decisiones editoriales. |
+| `/moderador/reportes` | Conteos, filtro y búsqueda por título de la receta relacionada. |
+| `/moderador/reportes/:id` | Motivo, fecha ficticia, enlace a la receta y preparación de decisiones del reporte. |
+
+Las rutas no están protegidas ni simulan una cuenta o un rol. Los ejemplos de
+`src/data/demoModerationRecipes.js` y `src/data/demoModerationReports.js` son
+independientes del catálogo público y del panel del cocinero. `demoReviewerId`
+es solo una referencia para comprobar si coincide la autoría o el reportante.
+
+| Recurso | Transiciones que se pueden preparar |
+| --- | --- |
+| Receta `PENDIENTE` | Aprobar → `PUBLICADA`; rechazar → `RECHAZADA` (con justificación). |
+| Receta `PUBLICADA` | Archivar → `ARCHIVADA` (con justificación). Retirarla a `BORRADOR` corresponde al autor. |
+| Receta `ARCHIVADA` | Restaurar → `PENDIENTE` para revisar de nuevo. |
+| Receta `BORRADOR` o `RECHAZADA` | Sin acciones de moderación. El autor debe preparar o corregir el contenido y enviarlo a revisión. |
+| Reporte `ABIERTO` | Pasar a `EN_REVISION`. |
+| Reporte `EN_REVISION` | Resolver → `RESUELTO` o descartar → `DESCARTADO`, ambos con justificación. |
+| Reporte `RESUELTO` o `DESCARTADO` | Sin más acciones. |
+
+La coincidencia de autor bloquea toda decisión editorial; la coincidencia de
+reportante bloquea toda decisión sobre el reporte. Gestionar un reporte y
+moderar la receta son operaciones independientes: resolverlo no archiva la
+receta. El formulario solo comprueba requisitos y muestra una propuesta
+temporal. Confirmar sigue deshabilitado; no hay peticiones a la API, cambios
+de estado, almacenamiento en el navegador ni eventos de auditoría en React.
+
+**Figma:** se revisaron 15 «Panel», 16 «Revisar recetas», 17 «Reportes» y el
+modal 23 de confirmación de eliminación. Se mantienen la barra lateral café,
+el fondo crema y los resúmenes en tarjetas; `/moderador` lleva a la cola
+en lugar de abrir otro tablero. Se usan tarjetas en lugar de tablas,
+conteos derivados de los ejemplos y filtros locales por estado y búsqueda,
+sin paginación ficticia, filtros de región/fecha ni controles de sesión.
+No se usa «Reportada» como estado editorial ni «Pendiente» como estado de
+reporte. En vez del modal de eliminación se prepara una decisión en el
+detalle con confirmación deshabilitada. No se localizaron frames específicos
+de detalle de moderación para una receta o un reporte; no se compararon
+esas vistas con Figma.
+
+**Pruebas:** `npm test` cubre transiciones, restricciones, justificación,
+IDs inexistentes y que preparar una resolución no modifica la receta.
+Para verificar en el navegador:
+
+- Filtra las recetas por `Pendiente`, busca un título que no exista y limpia
+  los filtros. Abre `demo-tamales-hongos`, comprueba el error sin acción y el
+  error de rechazo sin justificación. Completa el campo, revisa la vista
+  previa y recarga: la receta sigue pendiente y el formulario se reinicia.
+  En `demo-crema-milpa` no debe ofrecerse ninguna acción editorial.
+- En reportes, combina búsqueda y filtro. En `REP-002`, prepara resolver o
+  descartar y abre la receta enlazada; ambos estados deben conservarse.
+  En `REP-005` no debe haber acciones sobre el reporte; en `REP-006` sí,
+  pero la receta enlazada no debe ofrecer acciones editoriales.
+- Prueba `no-existe` en ambos detalles y los enlaces de regreso y al sitio
+  público. Recorre los controles con Tab. Se verificaron las colas y los
+  detalles a **320, 390, 768 y 1440 px**, sin desplazamiento horizontal.
+
+**Integración con Aleks:** acordar el contrato de lectura y decisiones,
+conectar autenticación, permisos, estados e identificadores reales y
+gestionar errores y conflictos por cambios de estado concurrentes. Spring
+Boot debe verificar cuenta activa, permisos, autoría, reportante, transición
+y justificación, y registrar cada decisión efectiva y su auditoría en la
+misma transacción.
+
 ### Tradiciones y regiones
 
 - Desde Inicio, pulsa **Tradiciones** en la barra para abrir la introducción.
@@ -233,7 +301,7 @@ demostrativas, no versiones históricas verificadas.
 ## Comprobaciones locales
 
 ```sh
-npm test         # Formularios, porciones, recetas, regiones, autores y panel del cocinero
+npm test         # Formularios, porciones, recetas, regiones, autores, cocinero y moderación
 npm run build    # Genera dist/
 npm run lint     # Revisa el código con ESLint
 npm run preview  # Sirve la compilación localmente después de build
