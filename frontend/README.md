@@ -33,6 +33,11 @@ Abre la URL que indique Vite (habitualmente `http://localhost:5173`).
 | `/tradiciones#regiones` | Acceso directo a la sección: el navegador desplaza la vista y enfoca el título. |
 | `/recetas/tlayuda` | Ingredientes, preparación, base de dos porciones y enlace de vuelta. |
 | `/recetas/no-existe` | El mensaje «Receta no encontrada» y el enlace al catálogo. |
+| `/perfil` | Estado de visitante, enlaces a login y registro y «Vista previa de diseño» no editable. |
+| `/autores` | Directorio de perfiles ficticios, marcados como ejemplos. |
+| `/autores/ejemplo` y `/autores/ejemplo-2` | Perfil público de demostración, aviso sobre las recetas asociadas y enlace al catálogo. |
+| `/autores/no-existe` | «Autor no encontrado» y enlace al directorio. |
+| `/favoritos` | Estado de visitante, enlaces a login y al catálogo, sin favoritos simulados. |
 | `/login` | Acceso con correo y contraseña, mostrar u ocultar contraseña y enlaces a alta y recuperación. |
 | `/registro` | Alta con nombre visible, correo, contraseña y confirmación. |
 | `/recuperar-contrasena` | Solicitud de recuperación por correo y enlace de regreso al login. |
@@ -58,6 +63,43 @@ estrecha: el menú debe ajustarse y las tarjetas deben reorganizarse.
 
 La página usa Fraunces e Inter, la paleta del sitio e ilustraciones CSS; la
 pantalla de Tradiciones del prototipo no se pudo verificar en Figma.
+
+### Perfil, autores y favoritos
+
+- Usa los enlaces **Mi perfil**, **Autores** y **Favoritos** del pie público.
+  Comprueba que **Iniciar sesión** y **Crear una cuenta** abren sus formularios
+  sin la cabecera ni el pie públicos.
+- En **Mi perfil**, la vista previa muestra un nombre ficticio y los límites
+  de `nombre_visible` (100 caracteres) y `biografia` (opcional, hasta 1000).
+  No se usa una URL de avatar; `avatar_url` es opcional. No hay edición ni guardado.
+- Abre los dos perfiles desde el directorio y prueba también un identificador
+  desconocido. Los autores ficticios viven en `src/data/demoAuthors.js`; las 14
+  recetas no tienen autor asignado y no se relacionan con esos perfiles.
+- Desde cada autor y desde **Favoritos** puedes abrir el catálogo público.
+  **Favoritos** no muestra ni guarda recetas personales. Estas vistas no crean
+  sesiones, no hacen peticiones a la API y no guardan datos en el navegador.
+- Recarga las rutas nuevas directamente. A **320, 390, 768 y 1440 px**, revisa
+  que no haya desplazamiento horizontal, que el directorio se reorganice y
+  que todos los enlaces tengan foco visible al recorrerlos con Tab.
+
+**Figma:** se revisaron los frames «05 · Perfil público del autor»,
+«13 · Cocinero · Favoritos y compras» y «14 · Cocinero · Mi perfil». El perfil
+público conserva la cabecera con iniciales y texto, sin métricas ni recetas
+atribuidas. Las vistas personales usan el layout público en lugar del panel
+de cocinero: no muestran ajustes de cuenta, favoritos guardados ni una lista
+de compras. El directorio de autores es una vista nueva.
+
+**Verificado:** enlaces de las nuevas vistas, recarga directa, foco visible
+por teclado y ausencia de desplazamiento horizontal a 320, 390, 768 y 1440 px.
+También se comprobó que Inicio, Catálogo, Detalle, Tradiciones y las tres rutas
+de autenticación siguen abriendo.
+
+Para la integración con Aleks quedan la sesión real, la consulta y edición del
+perfil propio, los perfiles públicos y su relación con recetas reales, y la
+consulta y gestión de favoritos propios. El servidor asignará `USUARIO` a cuentas
+nuevas, decidirá los permisos y verificará la cuenta activa y la propiedad.
+Solo se mostrarán como favoritas las recetas visibles según el servidor:
+publicadas, no eliminadas y de autores activos.
 
 ### Formularios de autenticación
 
@@ -128,7 +170,7 @@ demostrativas, no versiones históricas verificadas.
 ## Comprobaciones locales
 
 ```sh
-npm test         # Validación de formularios, porciones, recetas y regiones
+npm test         # Validación de formularios, porciones, recetas, regiones y autores
 npm run build    # Genera dist/
 npm run lint     # Revisa el código con ESLint
 npm run preview  # Sirve la compilación localmente después de build
