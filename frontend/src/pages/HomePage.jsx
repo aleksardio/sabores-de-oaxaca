@@ -56,9 +56,9 @@ export default function HomePage() {
 
       <section className="home-regions" aria-labelledby="regions-title">
         <h2 id="regions-title">Ocho regiones, cientos de formas de cocinar</h2>
-        <button className="site-button site-button--green" type="button" disabled title="La página de tradiciones aún no está disponible">
+        <Link className="site-button site-button--green" to="/tradiciones#regiones">
           Conocer las regiones
-        </button>
+        </Link>
       </section>
     </>
   )

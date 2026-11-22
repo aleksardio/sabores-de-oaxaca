@@ -1,11 +1,12 @@
 import { useRef, useState } from 'react'
+import { Link, useSearchParams } from 'react-router'
 import RecipeCard from '../components/RecipeCard.jsx'
 import { recipes } from '../data/recipes.js'
+import { getCatalogRegion, regions } from '../data/regions.js'
 import '../styles/recipes.css'
 
 const PAGE_SIZE = 6
 const QUICK_MINUTES = 30
-const regions = [...new Set(recipes.map(({ region }) => region))].sort((a, b) => a.localeCompare(b, 'es'))
 
 const filters = [
   { id: 'all', label: 'Todas', matches: () => true },
@@ -67,10 +68,19 @@ export default function RecipesPage() {
   const [draft, setDraft] = useState('')
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState('all')
-  const [region, setRegion] = useState('')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const regionParam = searchParams.get('region')
+  const region = getCatalogRegion(regionParam)
+  const [previousRegionParam, setPreviousRegionParam] = useState(regionParam)
   const [page, setPage] = useState(1)
   const searchInput = useRef(null)
   const resultsHeading = useRef(null)
+
+  // Reinicia también cuando Atrás/Adelante cambia la región, sin replicar el filtro.
+  if (regionParam !== previousRegionParam) {
+    setPreviousRegionParam(regionParam)
+    setPage(1)
+  }
 
   const terms = normalize(query).split(/\s+/).filter(Boolean)
   const activeFilter = filters.find(({ id }) => id === filter)
@@ -79,7 +89,17 @@ export default function RecipesPage() {
   )
   const pageCount = Math.ceil(results.length / PAGE_SIZE)
   const visibleRecipes = results.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
-  const hasFilters = Boolean(query || draft || region || filter !== 'all')
+  const hasFilters = Boolean(query || draft || searchParams.has('region') || filter !== 'all')
+
+  function changeRegion(value) {
+    const params = new URLSearchParams(searchParams)
+    if (value) {
+      params.set('region', value)
+    } else {
+      params.delete('region')
+    }
+    setSearchParams(params)
+  }
 
   function submitSearch(event) {
     event.preventDefault()
@@ -91,7 +111,7 @@ export default function RecipesPage() {
     setDraft('')
     setQuery('')
     setFilter('all')
-    setRegion('')
+    if (searchParams.has('region')) changeRegion('')
     setPage(1)
     searchInput.current.focus()
   }
@@ -141,22 +161,19 @@ export default function RecipesPage() {
               {label}
             </button>
           ))}
-          <button className="site-button" type="button" disabled title="La página de tradiciones aún no está disponible">
+          <Link className="site-button" to="/tradiciones#regiones">
             Por región
-          </button>
+          </Link>
         </div>
         <div className="catalog-toolbar__extras">
           <label className="catalog-region">
             Región
             <select
               value={region}
-              onChange={(event) => {
-                setRegion(event.target.value)
-                setPage(1)
-              }}
+              onChange={(event) => changeRegion(event.target.value)}
             >
               <option value="">Todas las regiones</option>
-              {regions.map((name) => <option key={name} value={name}>{name}</option>)}
+              {regions.map(({ name }) => <option key={name} value={name}>{name}</option>)}
             </select>
           </label>
           <button className="site-button catalog-clear" type="button" disabled={!hasFilters} onClick={clearFilters}>

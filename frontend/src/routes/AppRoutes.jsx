@@ -8,6 +8,7 @@ import NotFoundPage from '../pages/NotFoundPage.jsx'
 import RecipeDetailPage from '../pages/RecipeDetailPage.jsx'
 import RecipesPage from '../pages/RecipesPage.jsx'
 import RegisterPage from '../pages/RegisterPage.jsx'
+import TraditionsPage from '../pages/TraditionsPage.jsx'
 
 export default function AppRoutes() {
   return (
@@ -16,6 +17,7 @@ export default function AppRoutes() {
         <Route index element={<HomePage />} />
         <Route path="recetas" element={<RecipesPage />} />
         <Route path="recetas/:id" element={<RecipeDetailPage />} />
+        <Route path="tradiciones" element={<TraditionsPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
       <Route element={<AuthLayout />}>
