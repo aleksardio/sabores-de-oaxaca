@@ -11,9 +11,7 @@ export default function Navbar() {
         <nav className="site-nav" aria-label="Navegación principal">
           <NavLink className="site-button" to="/" end>Inicio</NavLink>
           <NavLink className="site-button" to="/recetas">Explorar</NavLink>
-          <button className="site-button" type="button" disabled title="La página de tradiciones aún no está disponible">
-            Tradiciones
-          </button>
+          <NavLink className="site-button" to="/tradiciones">Tradiciones</NavLink>
         </nav>
         <div className="header-actions">
           <NavLink className="site-button" to="/login">Iniciar sesión</NavLink>

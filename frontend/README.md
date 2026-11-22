@@ -28,6 +28,9 @@ Abre la URL que indique Vite (habitualmente `http://localhost:5173`).
 | --- | --- |
 | `/` | La portada, «Explorar recetas», las tres tarjetas destacadas y sus enlaces «Ver receta». |
 | `/recetas` | El catálogo, la búsqueda, los filtros, las páginas de seis recetas y los enlaces a cada detalle. |
+| `/recetas?region=Mixteca` | El selector inicia en Mixteca y el catálogo muestra Memelas. |
+| `/tradiciones` | La introducción, las ocho regiones y los enlaces al catálogo. |
+| `/tradiciones#regiones` | Acceso directo a la sección: el navegador desplaza la vista y enfoca el título. |
 | `/recetas/tlayuda` | Ingredientes, preparación, base de dos porciones y enlace de vuelta. |
 | `/recetas/no-existe` | El mensaje «Receta no encontrada» y el enlace al catálogo. |
 | `/login` | Acceso con correo y contraseña, mostrar u ocultar contraseña y enlaces a alta y recuperación. |
@@ -38,10 +41,23 @@ Abre la URL que indique Vite (habitualmente `http://localhost:5173`).
 Prueba también recargar directamente un detalle y navegar con una ventana
 estrecha: el menú debe ajustarse y las tarjetas deben reorganizarse.
 
-«Tradiciones», «Conocer las regiones» y «Por región» están deshabilitados
-hasta que exista la página de tradiciones. El selector «Región» sí filtra el
-catálogo. «Compartir receta» y «Compartir mi receta» esperan la pantalla de
-publicación.
+«Compartir receta» y «Compartir mi receta» esperan la pantalla de publicación.
+
+### Tradiciones y regiones
+
+- Desde Inicio, pulsa **Tradiciones** en la barra para abrir la introducción.
+  **Conocer las regiones** en Inicio y **Por región** en el catálogo deben ir
+  directamente a la sección de las ocho regiones. Abre también
+  `/tradiciones#regiones` en una pestaña nueva.
+- Desde la tarjeta de Mixteca, pulsa **Ver recetas** y recarga el catálogo:
+  Mixteca y Memelas deben seguir seleccionada y visible, respectivamente.
+  Desde Cañada, comprueba que el catálogo indique **No encontramos recetas**.
+- A **320, 390, 768 y 1440 px**, comprueba que se muestran las ocho tarjetas,
+  en una, una, dos y cuatro columnas respectivamente, sin desplazamiento
+  horizontal. Recorre los enlaces con Tab y comprueba que el foco es visible.
+
+La página usa Fraunces e Inter, la paleta del sitio e ilustraciones CSS; la
+pantalla de Tradiciones del prototipo no se pudo verificar en Figma.
 
 ### Formularios de autenticación
 
@@ -78,8 +94,11 @@ restablecimiento desde un enlace de recuperación.
   marca de tradición, **Rápidas** incluye hasta **30 minutos**, **Dulces** y
   **Bebidas** usan la categoría, y **Con video** usa un indicador de prueba
   (no hay reproductor ni videos enlazados). **Todas** no limita por tipo.
-- **Limpiar filtros** también borra la búsqueda. Cambiar la búsqueda, el
-  filtro o la región vuelve a la primera página.
+- Desde la página 2 del catálogo, cambia a **Valles Centrales** y comprueba
+  que `region` aparece en la URL y el listado vuelve a la página 1.
+  **Limpiar filtros** borra la búsqueda y elimina `region` sin quitar otros
+  parámetros. Con **Atrás** y **Adelante** el selector y los resultados
+  deben reflejar la URL. `?region=Desconocida` muestra todas las regiones.
 
 Los registros y sus metadatos son provisionales. La API todavía no interviene
 en el listado, la búsqueda, los filtros, la paginación ni los detalles.
@@ -109,7 +128,7 @@ demostrativas, no versiones históricas verificadas.
 ## Comprobaciones locales
 
 ```sh
-npm test         # Validación de formularios, porciones y datos locales
+npm test         # Validación de formularios, porciones, recetas y regiones
 npm run build    # Genera dist/
 npm run lint     # Revisa el código con ESLint
 npm run preview  # Sirve la compilación localmente después de build
