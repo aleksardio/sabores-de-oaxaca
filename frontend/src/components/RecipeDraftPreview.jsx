@@ -3,7 +3,7 @@ import { DishIllustration } from './RecipeCard.jsx'
 import RecipePreparation from './RecipePreparation.jsx'
 import '../styles/recipe-detail.css'
 
-export default function RecipeDraftPreview({ recipe }) {
+export default function RecipeDraftPreview({ recipe, heading }) {
   const ingredients = recipe.ingredients.filter(({ name, quantity, note }) => name.trim() || quantity || note.trim())
 
   return (
@@ -16,7 +16,7 @@ export default function RecipeDraftPreview({ recipe }) {
         {recipe.categories.map((category) => <li key={category} className="detail-badge">{category}</li>)}
       </ul>
       <header>
-        <h2 id="cook-preview-recipe">{recipe.title.trim() || 'Receta sin título'}</h2>
+        <h2 id="cook-preview-recipe">{heading ?? (recipe.title.trim() || 'Receta sin título')}</h2>
         <p className="cook-preview-description">{recipe.description.trim() || 'Aún no hay descripción.'}</p>
       </header>
       <div className="detail-grid detail-grid--instructions">

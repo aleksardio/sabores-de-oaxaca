@@ -1,0 +1,113 @@
+.mod-layout [data-state="ABIERTO"] { --state-bg: #fff1ce; --state-ink: #71500d; }
+.mod-layout [data-state="EN_REVISION"] { --state-bg: #fae8e1; --state-ink: #913e2d; }
+.mod-layout [data-state="RESUELTO"] { --state-bg: #e8f2e9; --state-ink: #245d44; }
+.mod-layout [data-state="DESCARTADO"] { --state-bg: #eeecea; --state-ink: #5c5551; }
+
+.mod-eyebrow {
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.mod-layout .cook-state-summary li[data-state="PENDIENTE"],
+.mod-card[data-state="PENDIENTE"] {
+  background: #fffbf1;
+}
+
+.mod-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr));
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mod-card {
+  display: grid;
+  align-content: start;
+  justify-items: start;
+  gap: 0.4rem;
+  padding: 0.9rem;
+  border: 1px solid var(--border);
+  border-inline-start: 4px solid var(--state-ink);
+  border-radius: 0.65rem;
+}
+
+.mod-card-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.6rem;
+  width: 100%;
+}
+
+.mod-card :is(h3, p), .mod-form p {
+  margin: 0;
+}
+
+.mod-card h3, .mod-decision h3 {
+  font-family: var(--font-display);
+  line-height: 1.3;
+}
+
+.mod-card p, .mod-audit, .mod-form > .cook-muted {
+  font-size: 0.875rem;
+}
+
+.mod-card-note, .mod-restriction {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.mod-card .site-button {
+  margin-top: 0.35rem;
+}
+
+.mod-form {
+  display: grid;
+  gap: 0.75rem;
+  max-width: 42rem;
+}
+
+.mod-form [role="status"]:empty {
+  margin-bottom: -0.75rem;
+}
+
+.mod-facts {
+  display: grid;
+  gap: 0.65rem;
+  margin: 0;
+}
+
+.mod-facts dt {
+  font-weight: 700;
+}
+
+.mod-facts dd {
+  margin: 0;
+}
+
+.mod-decision-preview {
+  padding: 0.9rem;
+  border-inline-start: 4px solid var(--green);
+  border-radius: 0.45rem;
+  background: #edf2e9;
+}
+
+.mod-decision-preview h3 {
+  margin: 0 0 0.5rem;
+}
+
+.mod-justification {
+  white-space: pre-wrap;
+}
+
+.mod-audit {
+  margin: 0.9rem 0 0;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
