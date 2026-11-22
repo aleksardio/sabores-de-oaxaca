@@ -1,8 +1,13 @@
 import { Navigate, Route, Routes } from 'react-router'
+import AdminPanelLayout from '../layouts/AdminPanelLayout.jsx'
 import AuthLayout from '../layouts/AuthLayout.jsx'
 import CookPanelLayout from '../layouts/CookPanelLayout.jsx'
 import MainLayout from '../layouts/MainLayout.jsx'
 import ModeratorPanelLayout from '../layouts/ModeratorPanelLayout.jsx'
+import AdminCatalogsPage from '../pages/AdminCatalogsPage.jsx'
+import AdminRecipesPage from '../pages/AdminRecipesPage.jsx'
+import AdminUserDetailPage from '../pages/AdminUserDetailPage.jsx'
+import AdminUsersPage from '../pages/AdminUsersPage.jsx'
 import AuthorProfilePage from '../pages/AuthorProfilePage.jsx'
 import AuthorsPage from '../pages/AuthorsPage.jsx'
 import CookRecipePage from '../pages/CookRecipePage.jsx'
@@ -49,6 +54,13 @@ export default function AppRoutes() {
         <Route path="recetas/:id" element={<ModerationRecipeDetailPage />} />
         <Route path="reportes" element={<ModerationReportsPage />} />
         <Route path="reportes/:id" element={<ModerationReportDetailPage />} />
+      </Route>
+      <Route path="admin" element={<AdminPanelLayout />}>
+        <Route index element={<Navigate to="usuarios" replace />} />
+        <Route path="usuarios" element={<AdminUsersPage />} />
+        <Route path="usuarios/:id" element={<AdminUserDetailPage />} />
+        <Route path="catalogos" element={<AdminCatalogsPage />} />
+        <Route path="recetas" element={<AdminRecipesPage />} />
       </Route>
       <Route element={<AuthLayout />}>
         <Route path="login" element={<LoginPage />} />

@@ -179,6 +179,82 @@ Boot debe verificar cuenta activa, permisos, autoría, reportante, transición
 y justificación, y registrar cada decisión efectiva y su auditoría en la
 misma transacción.
 
+### Panel de administración (demostración visual)
+
+Abre `/admin` directamente. El menú permite volver al sitio público o ir al
+panel del moderador, sin duplicar las pantallas de revisión y reportes.
+
+| Ruta | Qué muestra |
+| --- | --- |
+| `/admin` | Redirige a `/admin/usuarios`. |
+| `/admin/usuarios` | Resumen derivado de los ejemplos, búsqueda por nombre visible y filtros combinables por estado y rol asignado. |
+| `/admin/usuarios/:id` | Datos ficticios de la cuenta y preparación de acciones. Un ID desconocido muestra «Usuario no encontrado». |
+| `/admin/catalogos` | Categorías e ingredientes de solo lectura, con búsqueda independiente por nombre. |
+| `/admin/recetas` | Listado con búsqueda por título o autor y filtros independientes de estado editorial y baja lógica. |
+
+Los archivos `src/data/demoAdminUsers.js`, `src/data/demoAdminRecipes.js` y
+`src/data/demoAdminCatalogs.js` contienen siete cuentas, seis recetas
+administrativas, seis categorías y ocho ingredientes ficticios. Las recetas
+no son las del sitio público ni las de los paneles anteriores. Los nombres de
+las categorías coinciden con las opciones locales del cocinero. Las ocho
+regiones siguen siendo datos locales del frontend y no se presentan como un
+catálogo de MySQL.
+
+- **Roles:** `USUARIO`, `COCINERO`, `MODERADOR` y `ADMIN` son los únicos códigos
+  y son acumulables. Las cuentas nuevas reciben `USUARIO`. Solo `ADMIN`
+  puede asignar o retirar roles y su permiso de moderación no implica que
+  `MODERADOR` figure entre sus roles asignados. `ASIGNAR_ROL` rechaza roles
+  duplicados y `RETIRAR_ROL` rechaza roles ausentes.
+- **Cuentas:** `DESACTIVAR_CUENTA` se ofrece solo si está activa;
+  `REACTIVAR_CUENTA`, solo si está desactivada. La baja sería lógica e
+  impediría iniciar sesión u operar. Invalidar sesiones y recuperaciones
+  pendientes y actualizar `version_tokens` corresponde al servidor; la
+  reactivación no recupera sesiones.
+- **Recetas:** `BAJA_RECETA` no cambia el estado editorial ni borra
+  asociaciones, reportes o auditoría. `RESTAURAR_RECETA` quita la baja;
+  si la receta estaba `PUBLICADA`, pasaría a `PENDIENTE` para nueva
+  aprobación. Los demás estados se conservan, incluido `ARCHIVADA`.
+  Restaurar no es aprobar ni publicar. No hay borrado físico.
+
+Las seis acciones solo se previsualizan y exigen una justificación no vacía
+de hasta 1000 caracteres. La confirmación está deshabilitada. No se modifica
+ningún ejemplo, no se usa almacenamiento del navegador ni API y React no
+registra auditoría. No hay autenticación simulada ni rutas protegidas:
+ocultar un control en React no reemplaza la autorización del servidor.
+
+**Figma:** se revisaron los frames 19 «Administrador · Recetas» y 20
+«Administrador · Usuarios». Se conservaron barra lateral café, fondo crema,
+acentos terracota y verde y tablas en escritorio. En móvil, las filas se
+apilan y la navegación pasa arriba. Se omitieron correo, controles de
+sesión, notificaciones, paginación ficticia y filtros de región y fecha.
+Se distinguió la baja lógica del estado editorial; en vez de editar o
+rechazar recetas desde administración, se prepara la baja o restauración y
+se enlaza a moderación. No se localizaron frames específicos de detalle de
+cuenta, gestión de roles, catálogos ni auditoría. El detalle y los catálogos
+se adaptaron al layout existente; no se añadieron formularios de catálogos
+ni una pantalla de historial. `/admin` abre Usuarios en vez de un dashboard.
+
+**Pruebas:** `npm test` (51 aprobadas, 12 nuevas), `npm run build` y
+`npm run lint` completados. En Chromium se verificaron redirección, enlaces,
+búsquedas y filtros, estados vacíos, detalle inexistente, foco de validación,
+apertura por teclado, confirmación deshabilitada, las seis vistas previas y
+que recargar descarta la propuesta. Los listados, el detalle de cuenta,
+catálogos y la vista previa de receta se comprobaron a **320, 390, 768 y
+1440 px**, sin desplazamiento horizontal. También se comprobó la apertura
+de Inicio, Catálogo, Detalle, Tradiciones, Perfil, Autores, Favoritos,
+autenticación visual y ambos paneles anteriores.
+
+**Integración con Aleks:** acordar el contrato de API, las decisiones sobre
+los propios roles y la última cuenta `ADMIN`, y el tratamiento de errores y
+cambios concurrentes. Spring Boot debe comprobar cuenta activa, autorización
+y reglas en cada solicitud. El servidor registrará actor, recurso afectado,
+acción, rol si aplica, detalle y fecha en MySQL dentro de la misma transacción
+que el cambio; restaurar una baja que estaba `PUBLICADA` requiere además
+la auditoría editorial `RESTAURAR_BAJA`. Quedan por acordar acceso y retención
+del historial. Para una futura edición de catálogos, validar nombres no
+vacíos y límites de 100/255 caracteres para nombre/descripción de categoría
+y 150 para nombre de ingrediente.
+
 ### Tradiciones y regiones
 
 - Desde Inicio, pulsa **Tradiciones** en la barra para abrir la introducción.
@@ -301,7 +377,7 @@ demostrativas, no versiones históricas verificadas.
 ## Comprobaciones locales
 
 ```sh
-npm test         # Formularios, porciones, recetas, regiones, autores, cocinero y moderación
+npm test         # Formularios, porciones, recetas, regiones, autores y paneles de demostración
 npm run build    # Genera dist/
 npm run lint     # Revisa el código con ESLint
 npm run preview  # Sirve la compilación localmente después de build
