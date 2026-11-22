@@ -1,8 +1,11 @@
-import { Route, Routes } from 'react-router'
+import { Navigate, Route, Routes } from 'react-router'
 import AuthLayout from '../layouts/AuthLayout.jsx'
+import CookPanelLayout from '../layouts/CookPanelLayout.jsx'
 import MainLayout from '../layouts/MainLayout.jsx'
 import AuthorProfilePage from '../pages/AuthorProfilePage.jsx'
 import AuthorsPage from '../pages/AuthorsPage.jsx'
+import CookRecipePage from '../pages/CookRecipePage.jsx'
+import CookRecipesPage from '../pages/CookRecipesPage.jsx'
 import FavoritesPage from '../pages/FavoritesPage.jsx'
 import ForgotPasswordPage from '../pages/ForgotPasswordPage.jsx'
 import HomePage from '../pages/HomePage.jsx'
@@ -27,6 +30,13 @@ export default function AppRoutes() {
         <Route path="autores/:id" element={<AuthorProfilePage />} />
         <Route path="favoritos" element={<FavoritesPage />} />
         <Route path="*" element={<NotFoundPage />} />
+      </Route>
+      <Route path="cocinero" element={<CookPanelLayout />}>
+        <Route index element={<Navigate to="recetas" replace />} />
+        <Route path="recetas" element={<CookRecipesPage />} />
+        <Route path="recetas/nueva" element={<CookRecipePage mode="create" />} />
+        <Route path="recetas/:id/editar" element={<CookRecipePage mode="edit" />} />
+        <Route path="recetas/:id/vista-previa" element={<CookRecipePage mode="preview" />} />
       </Route>
       <Route element={<AuthLayout />}>
         <Route path="login" element={<LoginPage />} />

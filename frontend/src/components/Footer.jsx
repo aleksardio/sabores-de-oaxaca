@@ -9,6 +9,7 @@ export default function Footer() {
           <NavLink to="/autores">Autores</NavLink>
           <NavLink to="/perfil">Mi perfil</NavLink>
           <NavLink to="/favoritos">Favoritos</NavLink>
+          <NavLink to="/cocinero/recetas">Ver demostración del panel</NavLink>
         </nav>
         <p>Comunidad · Oaxaca · 2026</p>
       </div>

@@ -1,5 +1,6 @@
 import { Link, useParams } from 'react-router'
 import { DishIllustration } from '../components/RecipeCard.jsx'
+import RecipePreparation from '../components/RecipePreparation.jsx'
 import ServingsCalculator from '../components/ServingsCalculator.jsx'
 import { recipes } from '../data/recipes.js'
 import '../styles/recipe-detail.css'
@@ -25,8 +26,6 @@ export default function RecipeDetailPage() {
     )
   }
 
-  const steps = recipe.preparation.split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
-
   return (
     <article className="recipe-detail" aria-labelledby="recipe-detail-title">
       <header className="detail-header">
@@ -49,17 +48,7 @@ export default function RecipeDetailPage() {
 
       <div className="detail-grid detail-grid--instructions">
         <ServingsCalculator key={recipe.id} baseServings={recipe.baseServings} ingredients={recipe.ingredientDetails} />
-        <section className="detail-panel detail-preparation" aria-labelledby="detail-preparation-title">
-          <h2 id="detail-preparation-title">Preparación paso a paso</h2>
-          <ol className="detail-steps" role="list">
-            {steps.map((step, index) => (
-              <li key={index}>
-                <span className="detail-step-number" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
-                <span>{step}</span>
-              </li>
-            ))}
-          </ol>
-        </section>
+        <RecipePreparation preparation={recipe.preparation} />
       </div>
       <p className="detail-demo-note">Las cantidades y la preparación son ilustrativas; no representan una receta histórica verificada.</p>
     </article>
