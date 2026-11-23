@@ -1,6 +1,6 @@
 # Pruebas de integridad MySQL
 
-Las pruebas son optativas y no usan Spring ni el perfil `bootstrap`. Necesitan MySQL Community 8.0.16–8.0.x, JDK 17 y un **esquema dedicado vacío**. No apuntar a `sabores_oaxaca`, `sabores_oaxaca_test`, `araj_act3_dev`, `araj_act4_dev` ni a bases con datos. La suite solo acepta nombres `sabores_oaxaca_it_` seguidos de 1–40 letras minúsculas ASCII, dígitos o guiones bajos, se conecta a `127.0.0.1` y rechaza esquemas que ya tengan tablas o vistas. Nunca ejecuta Flyway clean, DROP, TRUNCATE ni limpieza de bases existentes.
+Las pruebas son optativas y no usan el perfil `bootstrap`; la suite de integridad usa JDBC y la de identidad inicia Spring con `dev`. Necesitan MySQL Community 8.0.16–8.0.x, JDK 17 y un **esquema dedicado vacío**. No apuntar a `sabores_oaxaca`, `sabores_oaxaca_test`, `araj_act3_dev`, `araj_act4_dev` ni a bases con datos. La suite solo acepta nombres `sabores_oaxaca_it_` seguidos de 1–40 letras minúsculas ASCII, dígitos o guiones bajos, se conecta a `127.0.0.1` y rechaza esquemas que ya tengan tablas o vistas. Nunca ejecuta Flyway clean, DROP, TRUNCATE ni limpieza de bases existentes.
 
 En un servidor local de pruebas, crear manualmente un esquema nuevo con un nombre único, por ejemplo `sabores_oaxaca_it_20261120`. Crear o utilizar un usuario exclusivo con permisos solo sobre ese esquema para conectarse, crear tablas e índices, aplicar las migraciones y operar sobre sus tablas. No concederle privilegios sobre otras bases. No usar credenciales reales de producción. MySQL debe tener activo el motor InnoDB y una cuenta que pueda consultar los metadatos de su propio esquema.
 
@@ -19,10 +19,24 @@ cd D:\Spring\sabores-de-oaxaca\backend
 $env:MYSQL_IT_SCHEMA = 'sabores_oaxaca_it_20261120'
 $env:MYSQL_IT_PORT = '3306'
 $env:MYSQL_IT_USERNAME = Read-Host 'Usuario MySQL exclusivo de pruebas'
-$env:MYSQL_IT_PASSWORD = Read-Host 'Contraseña MySQL de pruebas' -MaskInput
+$clave = Read-Host 'Contraseña MySQL de pruebas' -AsSecureString
+$env:MYSQL_IT_PASSWORD = [System.Net.NetworkCredential]::new('', $clave).Password
+Remove-Variable clave
 .\mvnw.cmd '-Dmysql.it=true' '-Dtest=MySqlIntegridadTest' test
 ```
 
 Las pruebas comprueban el esquema vacío, ejecutan V1–V5 mediante Flyway y dejan esas tablas y su historial en el esquema dedicado. Las inserciones de cada prueba usan una transacción y se revierten; los contadores autoincrementales pueden avanzar. Para repetir, crear **otro esquema vacío** con nombre distinto y actualizar `MYSQL_IT_SCHEMA`: la suite no reutiliza ni elimina el anterior. Si Flyway falla parcialmente, inspeccionar ese esquema sin ejecutar limpiezas automáticas; MySQL puede confirmar DDL implícitamente.
 
 El comando normal `mvnw.cmd test` no habilita la suite MySQL y no necesita credenciales; requiere el parámetro explícito `-Dmysql.it=true`. La contraseña solo vive en el entorno del proceso actual: al terminar, retirarla con `Remove-Item Env:MYSQL_IT_PASSWORD`. Usar una cuenta con privilegios limitados es indispensable: el nombre del esquema es una defensa adicional, no sustituye el aislamiento por permisos ni protege frente a configuración externa de MySQL como triggers o vistas ajenas.
+
+## Integración JPA de identidad
+
+Con otro esquema dedicado vacío y las mismas variables `MYSQL_IT_*`, ejecutar:
+
+```powershell
+.\mvnw.cmd '-Djpa.mysql.it=true' '-Dtest=IdentidadJpaMySqlTest' test
+```
+
+La prueba arranca Spring con `dev`, aplica V1–V5 y valida los mapeos con Hibernate;
+usa transacciones revertidas para usuarios y asignaciones de prueba. No ejecutar
+ambas suites contra el mismo esquema: cada una exige una base inicialmente vacía.
