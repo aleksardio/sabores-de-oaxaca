@@ -50,3 +50,13 @@ Con un tercer esquema dedicado vacío y las mismas variables, ejecutar:
 ```
 
 La prueba aplica V1–V5 mediante Flyway, inserta datos ficticios y aplica V6; verifica su conservación, las versiones y que una segunda migración no ejecute cambios. Finalmente inicia Spring con validación de Hibernate. No reutilizar el esquema de las otras suites.
+
+## Consultas JPA de recetas
+
+Con otro esquema dedicado y vacío, y las mismas variables `MYSQL_IT_*`:
+
+```powershell
+.\mvnw.cmd '-Drecetas.mysql.it=true' '-Dtest=RecetasJpaMySqlTest' test
+```
+
+La prueba aplica V1–V6, valida los mapeos con Hibernate y carga datos ficticios en ese esquema. No reutilizarlo para otras suites; no se ejecuta Flyway clean.

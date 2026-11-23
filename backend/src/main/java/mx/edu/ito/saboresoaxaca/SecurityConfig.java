@@ -28,6 +28,7 @@ class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
                 .requestMatchers(HttpMethod.GET, "/api/v1/public/health").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/recetas", "/api/v1/recetas/{id}", "/api/v1/categorias").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/v1/auth/registro").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/auth/me").authenticated()
