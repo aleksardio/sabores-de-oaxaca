@@ -1,19 +1,18 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { validateLogin, validateRecovery, validateRegistration } from '../src/utils/authValidation.js'
+import { validateLogin, validateRegistration } from '../src/utils/authValidation.js'
 
 const fields = (values = {}) => new Map(Object.entries(values))
 const email = 'persona@ejemplo.invalid'
-const validRegistration = { displayName: 'Chanclas', email, password: 'x', confirmation: 'x' }
+const validRegistration = { displayName: 'Chanclas', email, password: 'Ejemplo1!', confirmation: 'Ejemplo1!' }
 
 test('login requiere correo y contraseña', () => {
   assert.deepEqual(Object.keys(validateLogin(fields())), ['email', 'password'])
 })
 
-test('login y recuperación rechazan correos vacíos o mal formados', () => {
-  for (const invalid of ['', '   ', 'persona', 'persona@', '@ejemplo.invalid', 'a@b@c.invalid']) {
+test('login rechaza correos vacíos o mal formados', () => {
+  for (const invalid of ['', '   ', 'persona', 'persona@', '@ejemplo.invalid', 'a@b@c.invalid', 'a..b@ejemplo.invalid']) {
     assert.ok(validateLogin(fields({ email: invalid, password: 'x' })).email)
-    assert.ok(validateRecovery(fields({ email: invalid })).email)
   }
 })
 
@@ -25,11 +24,13 @@ test('registro requiere los cuatro campos y rechaza un nombre de solo espacios',
 })
 
 test('registro compara las contraseñas sin recortar espacios', () => {
-  assert.match(validateRegistration(fields({ ...validRegistration, confirmation: 'x ' })).confirmation, /no coinciden/)
+  const password = ` ${validRegistration.password} `
+  assert.deepEqual(validateRegistration(fields({ ...validRegistration, password, confirmation: password })), {})
+  assert.match(validateRegistration(fields({ ...validRegistration, password })).confirmation, /no coinciden/)
 })
 
 test('registro acepta un nombre de 100 caracteres y rechaza uno de 101', () => {
-  const name = '🌽'.repeat(100)
+  const name = '🌽'.repeat(50) // @Size en Java cuenta unidades UTF-16.
   assert.deepEqual(validateRegistration(fields({ ...validRegistration, displayName: name })), {})
   assert.match(validateRegistration(fields({ ...validRegistration, displayName: `${name}a` })).displayName, /100/)
 })
@@ -42,8 +43,21 @@ test('el correo admite hasta 254 caracteres', () => {
   assert.match(validateRegistration(fields({ ...validRegistration, email: `a${maxEmail}` })).email, /254/)
 })
 
-test('los tres validadores aceptan datos con formato válido sin aplicar una política de composición', () => {
+test('login no exige la política de composición de registro', () => {
   assert.deepEqual(validateLogin(fields({ email, password: 'x' })), {})
+})
+
+test('registro exige longitud, mayúscula ASCII, dígito y carácter especial que no sea espacio ni letra', () => {
+  for (const password of ['Ab1!', 'ejemplo1!', 'Éjemplo1!', 'Ejemplo!', 'Ejemplo1 ', 'Ejemplo1é', `A1!${'b'.repeat(70)}`]) {
+    assert.ok(validateRegistration(fields({ ...validRegistration, password, confirmation: password })).password)
+  }
   assert.deepEqual(validateRegistration(fields(validRegistration)), {})
-  assert.deepEqual(validateRecovery(fields({ email: ` ${email} ` })), {})
+})
+
+test('registro y login rechazan más de 72 bytes, no solo más de 72 caracteres', () => {
+  const password = `A1!x${'é'.repeat(34)}`
+  const valid = { ...validRegistration, password, confirmation: password }
+  assert.deepEqual(validateRegistration(fields(valid)), {})
+  assert.match(validateRegistration(fields({ ...valid, password: `${password}x` })).password, /72 bytes/)
+  assert.match(validateLogin(fields({ ...valid, password: `${password}x` })).password, /72 bytes/)
 })

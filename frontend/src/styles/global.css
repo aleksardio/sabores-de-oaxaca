@@ -100,6 +100,38 @@ h1 {
   gap: 6px;
 }
 
+.header-user-name {
+  display: none;
+}
+
+@media (min-width: 70rem) {
+  .header-user-name {
+    display: block;
+    max-width: 9rem;
+    overflow: hidden;
+    font-size: 0.85rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.session-message {
+  margin: 0;
+}
+
+.session-message:not(:empty) {
+  padding-block: 0.5rem;
+  overflow-wrap: anywhere;
+}
+
+.session-message--error {
+  color: var(--accent);
+}
+
+.session-local-action {
+  margin-bottom: 0.75rem;
+}
+
 .site-button {
   display: inline-flex;
   align-items: center;

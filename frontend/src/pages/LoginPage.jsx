@@ -1,17 +1,25 @@
-import { Link } from 'react-router'
+import { Link, Navigate, useLocation } from 'react-router'
+import { useAuth } from '../auth/useAuth.js'
 import AuthForm from '../components/AuthForm.jsx'
+import { getAuthDestination } from '../utils/authDestination.js'
 import { validateLogin } from '../utils/authValidation.js'
 
 const fields = ['email', 'password']
 
 export default function LoginPage() {
+  const { user, signIn } = useAuth()
+  const { state } = useLocation()
+  const destination = getAuthDestination(state?.from)
+
+  if (user) return <Navigate to={destination} replace />
+
   return (
     <section className="auth-page">
       <h1 tabIndex={-1}>Bienvenido de nuevo</h1>
-      <p className="auth-description">Inicia sesión para guardar y compartir recetas.</p>
-      <AuthForm fields={fields} validate={validateLogin} submitLabel="Iniciar sesión" showPasswordToggle>
-        <Link className="site-button" to="/recuperar-contrasena">¿Olvidaste tu contraseña?</Link>
-        <Link className="site-button" to="/registro">Crear cuenta nueva</Link>
+      <p className="auth-description">Inicia sesión para consultar tu perfil.</p>
+      <AuthForm fields={fields} validate={validateLogin} onSubmit={signIn} submitLabel="Iniciar sesión" pendingLabel="Iniciando sesión…" showPasswordToggle>
+        <Link className="site-button" to="/recuperar-contrasena" state={{ from: destination }}>¿Olvidaste tu contraseña?</Link>
+        <Link className="site-button" to="/registro" state={{ from: destination }}>Crear cuenta nueva</Link>
       </AuthForm>
     </section>
   )

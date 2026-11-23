@@ -190,6 +190,10 @@
   font-size: 14px;
 }
 
+.auth-status--error {
+  color: var(--accent);
+}
+
 @media (max-width: 52rem) {
   .auth-layout {
     grid-template-columns: minmax(0, 1fr);
