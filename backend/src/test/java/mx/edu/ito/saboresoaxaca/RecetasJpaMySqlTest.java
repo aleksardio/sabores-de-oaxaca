@@ -39,6 +39,24 @@ class RecetasJpaMySqlTest {
             int portHttp = ((org.springframework.boot.web.server.context.WebServerApplicationContext) app).getWebServer().getPort();
             String base = "http://127.0.0.1:" + portHttp + "/api/v1";
             var client = java.net.http.HttpClient.newHttpClient();
+            var preLogin = preflight(client, base + "/auth/login", "http://localhost:5173", "POST", "content-type");
+            assertEquals(200, preLogin.statusCode());
+            assertEquals("http://localhost:5173", preLogin.headers().firstValue("Access-Control-Allow-Origin").orElseThrow());
+            assertTrue(preLogin.headers().firstValue("Access-Control-Allow-Headers").orElseThrow().toLowerCase().contains("content-type"));
+            assertTrue(preLogin.headers().firstValue("Access-Control-Allow-Credentials").isEmpty());
+            var preMe = preflight(client, base + "/auth/me", "http://localhost:5173", "GET", "authorization");
+            assertEquals(200, preMe.statusCode());
+            assertTrue(preMe.headers().firstValue("Access-Control-Allow-Headers").orElseThrow().toLowerCase().contains("authorization"));
+            assertEquals("http://localhost:5173", preMe.headers().firstValue("Access-Control-Allow-Origin").orElseThrow());
+            var noPermitido = preflight(client, base + "/auth/me", "https://atacante.invalid", "GET", "authorization");
+            assertTrue(noPermitido.headers().firstValue("Access-Control-Allow-Origin").isEmpty());
+            assertEquals(403, noPermitido.statusCode());
+            var corsPublico = client.send(java.net.http.HttpRequest.newBuilder(java.net.URI.create(base + "/recetas")).header("Origin", "http://localhost:5173").GET().build(), java.net.http.HttpResponse.BodyHandlers.ofString());
+            assertEquals(200, corsPublico.statusCode());
+            assertEquals("http://localhost:5173", corsPublico.headers().firstValue("Access-Control-Allow-Origin").orElseThrow());
+            var meAnonimo = client.send(java.net.http.HttpRequest.newBuilder(java.net.URI.create(base + "/auth/me")).header("Origin", "http://localhost:5173").GET().build(), java.net.http.HttpResponse.BodyHandlers.ofString());
+            assertEquals(401, meAnonimo.statusCode());
+            assertEquals("http://localhost:5173", meAnonimo.headers().firstValue("Access-Control-Allow-Origin").orElseThrow());
             assertEquals(0, jdbc.queryForObject("SELECT COUNT(*) FROM recetas", Integer.class));
             var catalogoVacio = get(client, base + "/recetas");
             assertEquals(200, catalogoVacio.statusCode());
@@ -176,6 +194,12 @@ class RecetasJpaMySqlTest {
     }
     private static java.net.http.HttpResponse<String> get(java.net.http.HttpClient client, String url) throws Exception {
         return client.send(java.net.http.HttpRequest.newBuilder(java.net.URI.create(url)).GET().build(), java.net.http.HttpResponse.BodyHandlers.ofString());
+    }
+    private static java.net.http.HttpResponse<String> preflight(java.net.http.HttpClient client, String url, String origen, String metodo, String headers) throws Exception {
+        var request = java.net.http.HttpRequest.newBuilder(java.net.URI.create(url)).header("Origin", origen)
+                .header("Access-Control-Request-Method", metodo).header("Access-Control-Request-Headers", headers)
+                .method("OPTIONS", java.net.http.HttpRequest.BodyPublishers.noBody()).build();
+        return client.send(request, java.net.http.HttpResponse.BodyHandlers.ofString());
     }
     private static java.net.http.HttpResponse<String> enviar(java.net.http.HttpClient client, String url, String metodo, String cuerpo, String jwt) throws Exception {
         var b = java.net.http.HttpRequest.newBuilder(java.net.URI.create(url)).header("Content-Type", "application/json");
