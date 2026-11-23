@@ -154,17 +154,6 @@
   font-size: 0.875rem;
 }
 
-.traditions-card .traditions-card__note {
-  color: var(--green);
-  font-size: 0.8rem;
-  font-weight: 600;
-}
-
-.traditions-card .site-button {
-  margin-block-start: auto;
-  color: var(--accent);
-}
-
 @media (max-width: 60rem) {
   .traditions .traditions-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));

@@ -1,5 +1,8 @@
 # Servicios
 
-En esta carpeta se añadirán las llamadas a la API cuando se acuerde su contrato
-con el equipo de backend. Por ahora el catálogo usa los ejemplos locales de
-`../data/recipes.js` y no necesita un servidor de API.
+`apiClient.js` centraliza las solicitudes a `/api/v1` y los errores.
+`recipesService.js` consume recetas y categorías públicas sin Bearer.
+`authService.js` consume autenticación y envía Bearer solo en las operaciones
+que lo requieren. El proxy de Vite reenvía las consultas al backend durante
+el desarrollo. Consulta el [README del frontend](../../README.md) para el
+arranque local y los contratos.

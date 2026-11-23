@@ -1,43 +1,10 @@
-import { useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import RecipeCard from '../components/RecipeCard.jsx'
-import { recipes } from '../data/recipes.js'
-import { getCatalogRegion, regions } from '../data/regions.js'
+import RequestError from '../components/RequestError.jsx'
+import { usePublicRequest } from '../hooks/usePublicRequest.js'
+import { getCategories, getRecipes, readCatalogFilters, recipeTypes } from '../services/recipesService.js'
 import '../styles/recipes.css'
-
-const PAGE_SIZE = 6
-const QUICK_MINUTES = 30
-
-const filters = [
-  { id: 'all', label: 'Todas', matches: () => true },
-  { id: 'traditional', label: 'Tradicionales', matches: (recipe) => recipe.traditional },
-  { id: 'quick', label: 'Rápidas', hint: `Hasta ${QUICK_MINUTES} min`, matches: (recipe) => recipe.durationMinutes <= QUICK_MINUTES },
-  { id: 'video', label: 'Con video', hint: 'Disponibilidad de video de demostración', matches: (recipe) => recipe.hasVideo },
-  { id: 'sweets', label: 'Dulces', matches: (recipe) => recipe.category === 'Dulces' },
-  { id: 'drinks', label: 'Bebidas', matches: (recipe) => recipe.category === 'Bebidas' },
-]
-
-function normalize(value) {
-  return value.normalize('NFD').replace(/\p{M}/gu, '').toLocaleLowerCase('es').trim()
-}
-
-function formatDuration(minutes) {
-  const hours = Math.floor(minutes / 60)
-  const remainder = minutes % 60
-
-  if (!hours) return `${minutes} min`
-  return remainder ? `${hours} h ${remainder} min` : `${hours} h`
-}
-
-function includesTerms(recipe, terms) {
-  const searchable = [
-    recipe.name, recipe.catalogName, recipe.region, recipe.category,
-    formatDuration(recipe.durationMinutes), ...recipe.ingredients,
-  ].filter(Boolean).join(' ')
-  const normalized = normalize(searchable)
-
-  return terms.every((term) => normalized.includes(term))
-}
 
 function CatalogPagination({ page, pageCount, onPageChange }) {
   return (
@@ -45,18 +12,7 @@ function CatalogPagination({ page, pageCount, onPageChange }) {
       <button className="site-button" type="button" disabled={page === 1} onClick={() => onPageChange(page - 1)}>
         Anterior
       </button>
-      {Array.from({ length: pageCount }, (_, index) => index + 1).map((number) => (
-        <button
-          className="catalog-pagination__number"
-          type="button"
-          key={number}
-          aria-label={`Página ${number}`}
-          aria-current={number === page ? 'page' : undefined}
-          onClick={() => onPageChange(number)}
-        >
-          {number}
-        </button>
-      ))}
+      <span aria-current="page">Página {page} de {pageCount}</span>
       <button className="site-button" type="button" disabled={page === pageCount} onClick={() => onPageChange(page + 1)}>
         Siguiente
       </button>
@@ -65,155 +21,133 @@ function CatalogPagination({ page, pageCount, onPageChange }) {
 }
 
 export default function RecipesPage() {
-  const [draft, setDraft] = useState('')
-  const [query, setQuery] = useState('')
-  const [filter, setFilter] = useState('all')
   const [searchParams, setSearchParams] = useSearchParams()
-  const regionParam = searchParams.get('region')
-  const region = getCatalogRegion(regionParam)
-  const [previousRegionParam, setPreviousRegionParam] = useState(regionParam)
-  const [page, setPage] = useState(1)
+  const { titulo, categoria, tipo, pagina } = readCatalogFilters(searchParams)
+  const [search, setSearch] = useState({ title: titulo, draft: titulo })
+  if (search.title !== titulo) setSearch({ title: titulo, draft: titulo })
   const searchInput = useRef(null)
   const resultsHeading = useRef(null)
-
-  // Reinicia también cuando Atrás/Adelante cambia la región, sin replicar el filtro.
-  if (regionParam !== previousRegionParam) {
-    setPreviousRegionParam(regionParam)
-    setPage(1)
-  }
-
-  const terms = normalize(query).split(/\s+/).filter(Boolean)
-  const activeFilter = filters.find(({ id }) => id === filter)
-  const results = recipes.filter((recipe) =>
-    activeFilter.matches(recipe) && (!region || region === recipe.region) && includesTerms(recipe, terms),
+  const loadRecipes = useCallback(
+    (signal) => getRecipes({ titulo, categoria, tipo, pagina }, signal),
+    [titulo, categoria, tipo, pagina],
   )
-  const pageCount = Math.ceil(results.length / PAGE_SIZE)
-  const visibleRecipes = results.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
-  const hasFilters = Boolean(query || draft || searchParams.has('region') || filter !== 'all')
+  const recipes = usePublicRequest(loadRecipes)
+  const categories = usePublicRequest(getCategories)
+  const selectedCategory = categories.data?.find(({ id }) => id === categoria)
+  const legacyRegion = searchParams.has('region')
 
-  function changeRegion(value) {
-    const params = new URLSearchParams(searchParams)
-    if (value) {
-      params.set('region', value)
-    } else {
-      params.delete('region')
-    }
-    setSearchParams(params)
-  }
-
-  function submitSearch(event) {
-    event.preventDefault()
-    setQuery(draft.trim())
-    setPage(1)
+  function changeFilter(name, value) {
+    setSearchParams((previous) => {
+      const params = new URLSearchParams(previous)
+      if (value) params.set(name, value)
+      else params.delete(name)
+      params.delete('pagina')
+      return params
+    })
   }
 
   function clearFilters() {
-    setDraft('')
-    setQuery('')
-    setFilter('all')
-    if (searchParams.has('region')) changeRegion('')
-    setPage(1)
+    setSearch({ title: titulo, draft: '' })
     searchInput.current.focus()
+    setSearchParams((previous) => {
+      const params = new URLSearchParams(previous)
+      for (const key of ['titulo', 'categoria', 'tipo', 'pagina', 'region']) params.delete(key)
+      return params
+    })
   }
 
   function changePage(number) {
-    if (number === page) return
-    setPage(number)
+    setSearchParams((previous) => {
+      const params = new URLSearchParams(previous)
+      if (number === 1) params.delete('pagina')
+      else params.set('pagina', number - 1)
+      return params
+    })
     resultsHeading.current.focus()
   }
+
+  const { contenido, totalElementos, totalPaginas } = recipes.data ?? {}
+  const page = (recipes.data?.pagina ?? pagina) + 1
+  const outsideCatalog = Boolean(recipes.data && pagina > 0 && page > totalPaginas)
 
   return (
     <section className="catalog" aria-labelledby="catalog-title">
       <p className="catalog-eyebrow">RECETARIO</p>
       <h1 id="catalog-title">Explora recetas de Oaxaca</h1>
-      <p className="catalog-intro">Encuentra un platillo por nombre, ingrediente, tiempo o región.</p>
+      <p className="catalog-intro">Busca por título o explora por tipo y categoría.</p>
+      {legacyRegion && (
+        <p className="catalog-notice" role="status">
+          El filtro por región aún no está disponible. <Link to="/recetas">Explorar el catálogo completo</Link>.
+        </p>
+      )}
 
-      <form className="catalog-search" role="search" aria-label="Catálogo de recetas" onSubmit={submitSearch}>
-        <label className="catalog-sr-only" htmlFor="recipe-search">Buscar por nombre, ingrediente, región o categoría</label>
+      <form className="catalog-search" role="search" aria-label="Catálogo de recetas" onSubmit={(event) => {
+        event.preventDefault()
+        const value = search.draft.trim()
+        setSearch({ title: titulo, draft: value })
+        changeFilter('titulo', value)
+      }}>
+        <label className="catalog-sr-only" htmlFor="recipe-search">Buscar por título</label>
         <div className="catalog-search__field">
           <span aria-hidden="true">⌕</span>
-          <input
-            id="recipe-search"
-            type="search"
-            ref={searchInput}
-            value={draft}
-            placeholder="Nombre, ingrediente, región o categoría..."
-            onChange={(event) => setDraft(event.target.value)}
-          />
+          <input id="recipe-search" ref={searchInput} type="search" maxLength={200}
+            value={search.draft} onChange={(event) => setSearch({ title: titulo, draft: event.target.value })}
+            placeholder="Título de la receta..." />
         </div>
         <button className="site-button site-button--clay" type="submit">Buscar recetas</button>
       </form>
 
       <div className="catalog-toolbar">
-        <div className="catalog-filters" role="group" aria-label="Filtros de recetas">
-          {filters.map(({ id, label, hint }) => (
-            <button
-              className="site-button"
-              type="button"
-              key={id}
-              title={hint}
-              aria-pressed={filter === id}
-              onClick={() => {
-                setFilter(id)
-                setPage(1)
-              }}
-            >
+        <div className="catalog-filters" role="group" aria-label="Tipo de receta">
+          {recipeTypes.map(({ value, label }) => (
+            <button className="site-button" type="button" key={value} aria-pressed={tipo === value}
+              onClick={() => changeFilter('tipo', value)}>
               {label}
             </button>
           ))}
-          <Link className="site-button" to="/tradiciones#regiones">
-            Por región
-          </Link>
         </div>
         <div className="catalog-toolbar__extras">
-          <label className="catalog-region">
-            Región
-            <select
-              value={region}
-              onChange={(event) => changeRegion(event.target.value)}
-            >
-              <option value="">Todas las regiones</option>
-              {regions.map(({ name }) => <option key={name} value={name}>{name}</option>)}
+          <div className="catalog-category">
+            <label htmlFor="recipe-category">Categoría</label>
+            <select id="recipe-category" value={categoria ?? ''} onChange={(event) => changeFilter('categoria', event.target.value)}>
+              <option value="">Todas las categorías</option>
+              {categoria && !selectedCategory && <option value={categoria}>Categoría (ID {categoria})</option>}
+              {categories.data?.map(({ id, nombre }) => <option key={id} value={id}>{nombre}</option>)}
             </select>
-          </label>
-          <button className="site-button catalog-clear" type="button" disabled={!hasFilters} onClick={clearFilters}>
-            Limpiar filtros
-          </button>
+          </div>
+          <button className="site-button" type="button" onClick={clearFilters}>Limpiar filtros</button>
         </div>
       </div>
+      {categories.loading && <p role="status">Cargando categorías…</p>}
+      {categories.error && <RequestError error={categories.error} onRetry={categories.retry} retryLabel="Reintentar categorías" />}
+      {categories.data?.length === 0 && <p className="catalog-notice">No hay categorías disponibles.</p>}
+      {selectedCategory?.descripcion && <p className="catalog-notice">{selectedCategory.descripcion}</p>}
 
-      <h2 className="catalog-results" ref={resultsHeading} tabIndex={-1}>
-        Recetas destacadas
-        <span role="status">
-          {' · '}{results.length} {results.length === 1 ? 'resultado' : 'resultados'}
-          {pageCount > 1 && <span className="catalog-sr-only">{` · Página ${page} de ${pageCount}`}</span>}
-        </span>
-      </h2>
-
-      {results.length ? (
+      <h2 className="catalog-results" ref={resultsHeading} tabIndex={-1}>Recetas</h2>
+      <p role="status">
+        {recipes.loading && 'Cargando recetas…'}
+        {recipes.data && `${totalElementos} ${totalElementos === 1 ? 'resultado' : 'resultados'}`}
+      </p>
+      {recipes.error && <RequestError error={recipes.error} onRetry={recipes.retry} retryLabel="Reintentar recetas" />}
+      {outsideCatalog ? (
+        <div className="catalog-empty">
+          <h3>Esta página no está disponible</h3>
+          <button className="site-button" type="button" onClick={() => changePage(1)}>Ir a la primera página</button>
+        </div>
+      ) : contenido?.length ? (
         <>
-          <ul className="catalog-grid">
-            {visibleRecipes.map((recipe) => (
-              <RecipeCard
-                key={recipe.id}
-                id={recipe.id}
-                title={recipe.catalogName ?? recipe.name}
-                description={recipe.catalogDescription ?? recipe.description}
-                region={recipe.region}
-                time={formatDuration(recipe.durationMinutes)}
-                tone={recipe.tone}
-              />
-            ))}
+          <ul className="catalog-grid" role="list">
+            {contenido.map((recipe) => <RecipeCard key={recipe.id} recipe={recipe} />)}
           </ul>
-          <CatalogPagination page={page} pageCount={pageCount} onPageChange={changePage} />
+          {totalPaginas > 1 && <CatalogPagination page={page} pageCount={totalPaginas} onPageChange={changePage} />}
         </>
-      ) : (
+      ) : recipes.data && (
         <div className="catalog-empty">
           <h3>No encontramos recetas</h3>
-          <p>Prueba con otro término, cambia de región o limpia los filtros para ver todas las recetas.</p>
-          <button className="site-button site-button--green" type="button" onClick={clearFilters}>Limpiar filtros</button>
+          <p>{titulo || tipo || categoria ? 'Prueba otro título o cambia los filtros.' : 'Aún no hay recetas en el catálogo.'}</p>
         </div>
       )}
+      <Link to="/tradiciones#regiones">Conocer las regiones de Oaxaca</Link>
     </section>
   )
 }

@@ -170,6 +170,14 @@ a.site-button:hover {
   opacity: 1;
 }
 
+.public-request-error {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  color: var(--accent);
+  overflow-wrap: anywhere;
+}
+
 .page {
   flex: 1;
   padding-block: clamp(1.5rem, 5vw, 4rem);

@@ -1,33 +1,14 @@
 import { Link } from 'react-router'
 import RecipeCard, { DishIllustration } from '../components/RecipeCard.jsx'
+import RequestError from '../components/RequestError.jsx'
+import { usePublicRequest } from '../hooks/usePublicRequest.js'
+import { getRecipes } from '../services/recipesService.js'
 import '../styles/home.css'
 
-const featuredRecipes = [
-  {
-    id: 'mole-negro',
-    title: 'Mole negro',
-    region: 'Valles Centrales',
-    time: '3 h',
-    description: 'Una receta de fiesta con historia.',
-  },
-  {
-    id: 'tlayuda',
-    title: 'Tlayuda tradicional',
-    region: 'Valles Centrales',
-    time: '35 min',
-    description: 'Asiento, frijoles y quesillo.',
-  },
-  {
-    id: 'tamales-de-chepil',
-    title: 'Tamales de chepil',
-    region: 'Sierra Norte',
-    time: '1 h',
-    description: 'Cocina de nuestras abuelas.',
-    tone: 'green',
-  },
-]
+const loadRecipes = (signal) => getRecipes({ tamano: 3 }, signal)
 
 export default function HomePage() {
+  const { data, error, loading, retry } = usePublicRequest(loadRecipes)
   return (
     <>
       <section className="home-hero" aria-labelledby="home-title">
@@ -48,10 +29,17 @@ export default function HomePage() {
       </section>
 
       <section className="home-featured" aria-labelledby="featured-title">
-        <h2 id="featured-title">Los sabores que unen a nuestra gente</h2>
-        <ul className="featured-grid">
-          {featuredRecipes.map((recipe) => <RecipeCard key={recipe.id} {...recipe} />)}
-        </ul>
+        <h2 id="featured-title">Recetas para descubrir</h2>
+        <div className="home-featured__content">
+          {loading && <p role="status">Cargando recetas…</p>}
+          {error && <RequestError error={error} onRetry={retry} />}
+          {data && (data.contenido.length ? (
+            <ul className="featured-grid" role="list">
+              {data.contenido.map((recipe) => <RecipeCard key={recipe.id} recipe={recipe} />)}
+            </ul>
+          ) : <p role="status">Aún no hay recetas para descubrir.</p>)}
+          <Link to="/recetas">Ver catálogo de recetas</Link>
+        </div>
       </section>
 
       <section className="home-regions" aria-labelledby="regions-title">

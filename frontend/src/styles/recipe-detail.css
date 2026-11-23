@@ -56,9 +56,16 @@
   gap: 20px;
 }
 
-.dish-art.dish-art--detail {
+.dish-art.dish-art--detail,
+.detail-photo {
   height: 256px;
   background: linear-gradient(150deg, var(--ink), var(--clay) 80%);
+}
+
+.detail-photo {
+  width: 100%;
+  border-radius: 14px;
+  object-fit: cover;
 }
 
 .dish-art--detail .dish-art__plate {
@@ -106,12 +113,6 @@
   font-weight: 600;
 }
 
-.detail-badge--demo {
-  background: var(--hero-surface);
-  color: var(--accent);
-  text-transform: uppercase;
-}
-
 .detail-servings {
   display: flex;
   flex-wrap: wrap;
@@ -128,6 +129,29 @@
   border-color: var(--green);
   background: var(--green);
   color: #fff;
+}
+
+.detail-servings--custom {
+  align-items: center;
+}
+
+.detail-servings input {
+  width: 5.5rem;
+  min-height: 44px;
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  color: var(--ink);
+  font: inherit;
+}
+
+.detail-servings input:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 3px;
+}
+
+.detail-ingredients [role='status']:empty {
+  position: absolute;
 }
 
 .detail-ingredient-list,
@@ -184,16 +208,8 @@
   text-align: center;
 }
 
-.detail-approximation,
-.detail-demo-note {
+.detail-approximation {
   font-size: 13px;
-}
-
-.recipe-detail .detail-demo-note {
-  max-width: none;
-  padding: 12px 16px;
-  border-radius: 9px;
-  background: var(--hero-surface);
 }
 
 @media (max-width: 54rem) {
@@ -216,7 +232,8 @@
     gap: 16px;
   }
 
-  .dish-art.dish-art--detail {
+  .dish-art.dish-art--detail,
+  .detail-photo {
     height: clamp(180px, 48vw, 256px);
   }
 

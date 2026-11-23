@@ -1,4 +1,4 @@
-// Los nombres son también los valores de region en el catálogo local.
+// Guía cultural editorial; no representa un catálogo ni un filtro de la API.
 export const regions = [
   {
     name: 'Cañada',
@@ -41,7 +41,3 @@ export const regions = [
     description: 'De las tlayudas al tejate, el maíz toma formas distintas en las cocinas y los mercados de los valles.',
   },
 ]
-
-export function getCatalogRegion(value) {
-  return regions.find(({ name }) => name === value)?.name ?? ''
-}
