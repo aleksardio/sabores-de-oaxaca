@@ -28,6 +28,10 @@ $env:DB_USERNAME = 'sabores_app'
 $clave = Read-Host 'Contraseña MySQL local' -AsSecureString
 $env:DB_PASSWORD = [System.Net.NetworkCredential]::new('', $clave).Password
 Remove-Variable clave
+$bytes = [byte[]]::new(32)
+[System.Security.Cryptography.RandomNumberGenerator]::Fill($bytes)
+$env:JWT_SECRET_BASE64 = [Convert]::ToBase64String($bytes)
+Remove-Variable bytes
 .\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=dev"
 ```
 
@@ -57,10 +61,12 @@ repositorios. `UsuarioRol` usa clave compuesta y relaciones de carga diferida;
 entidades existentes, **no las 14 tablas completas** ni todas sus restricciones.
 Las migraciones Flyway son el mecanismo de creación del esquema.
 
-El único endpoint disponible es `GET /api/v1/public/health`; las demás rutas están
-denegadas por Spring Security. Están pendientes, entre otras funcionalidades, el
-registro e inicio de sesión, la autenticación JWT, los servicios y endpoints de
-identidad, recetas y moderación. No se exponen entidades JPA en respuestas HTTP.
+Los endpoints públicos son `GET /api/v1/public/health`, `POST /api/v1/auth/registro`
+y `POST /api/v1/auth/login`. `GET /api/v1/auth/me` requiere Bearer JWT; las demás rutas
+están denegadas; `POST /api/v1/auth/logout` requiere Bearer JWT. Autenticación y
+registro requieren persistencia, no `bootstrap`.
+Quedan pendientes recuperación, recetas y moderación. Contratos:
+[registro](docs/REGISTRO_API.md) y [autenticación](docs/AUTENTICACION_API.md).
 
 ## Pruebas
 

@@ -25,7 +25,7 @@ Remove-Variable clave
 .\mvnw.cmd '-Dmysql.it=true' '-Dtest=MySqlIntegridadTest' test
 ```
 
-Las pruebas comprueban el esquema vacío, ejecutan V1–V5 mediante Flyway y dejan esas tablas y su historial en el esquema dedicado. Las inserciones de cada prueba usan una transacción y se revierten; los contadores autoincrementales pueden avanzar. Para repetir, crear **otro esquema vacío** con nombre distinto y actualizar `MYSQL_IT_SCHEMA`: la suite no reutiliza ni elimina el anterior. Si Flyway falla parcialmente, inspeccionar ese esquema sin ejecutar limpiezas automáticas; MySQL puede confirmar DDL implícitamente.
+Las pruebas comprueban el esquema vacío, ejecutan V1–V6 mediante Flyway y dejan esas tablas y su historial en el esquema dedicado. Para repetir, crear **otro esquema vacío** con nombre distinto y actualizar `MYSQL_IT_SCHEMA`: la suite no reutiliza ni elimina el anterior. Si Flyway falla parcialmente, inspeccionar ese esquema sin ejecutar limpiezas automáticas; MySQL puede confirmar DDL implícitamente.
 
 El comando normal `mvnw.cmd test` no habilita la suite MySQL y no necesita credenciales; requiere el parámetro explícito `-Dmysql.it=true`. La contraseña solo vive en el entorno del proceso actual: al terminar, retirarla con `Remove-Item Env:MYSQL_IT_PASSWORD`. Usar una cuenta con privilegios limitados es indispensable: el nombre del esquema es una defensa adicional, no sustituye el aislamiento por permisos ni protege frente a configuración externa de MySQL como triggers o vistas ajenas.
 
@@ -37,6 +37,16 @@ Con otro esquema dedicado vacío y las mismas variables `MYSQL_IT_*`, ejecutar:
 .\mvnw.cmd '-Djpa.mysql.it=true' '-Dtest=IdentidadJpaMySqlTest' test
 ```
 
-La prueba arranca Spring con `dev`, aplica V1–V5 y valida los mapeos con Hibernate;
+La prueba arranca Spring con `dev`, aplica V1–V6 y valida los mapeos con Hibernate;
 usa transacciones revertidas para usuarios y asignaciones de prueba. No ejecutar
 ambas suites contra el mismo esquema: cada una exige una base inicialmente vacía.
+
+## Actualización de V5 a V6
+
+Con un tercer esquema dedicado vacío y las mismas variables, ejecutar:
+
+```powershell
+.\mvnw.cmd '-Dv6.mysql.it=true' '-Dtest=MigracionV6MySqlTest' test
+```
+
+La prueba aplica V1–V5 mediante Flyway, inserta datos ficticios y aplica V6; verifica su conservación, las versiones y que una segunda migración no ejecute cambios. Finalmente inicia Spring con validación de Hibernate. No reutilizar el esquema de las otras suites.
