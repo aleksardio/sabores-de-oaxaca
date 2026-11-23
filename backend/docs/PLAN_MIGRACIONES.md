@@ -1,6 +1,6 @@
 # Plan propuesto de migraciones
 
-No hay SQL ni migraciones ejecutadas en esta etapa. Las versiones siguientes son una propuesta para una implementación posterior, una vez aprobados modelo, reglas, colación y flujos. Cada migración versionada será inmutable tras aplicarse en un entorno compartido; cambios posteriores se hacen con una nueva versión. MySQL realiza commits implícitos en muchos DDL: no asumir rollback transaccional completo, preparar respaldo y ensayar recuperación ante fallos parciales.
+Las migraciones ejecutables están en `src/main/resources/db/migration/`. Cada migración versionada es inmutable tras aplicarse en un entorno compartido; cambios posteriores se hacen con una nueva versión. MySQL realiza commits implícitos en muchos DDL: no asumir rollback transaccional completo, preparar respaldo y ensayar recuperación ante fallos parciales.
 
 ## Orden y dependencias
 
@@ -11,6 +11,7 @@ No hay SQL ni migraciones ejecutadas en esta etapa. Las versiones siguientes son
 | V3 | `favoritos`, `reportes`, `auditoria_moderacion`, `auditoria_administrativa` | Usuarios y roles de V1, recetas de V2; reportes antes de auditoría de moderación |
 | V4 | `recuperaciones_contrasena` | Usuarios de V1 |
 | V5 | Datos de referencia: cuatro roles y, únicamente si se aprueba su catálogo oficial, categorías iniciales | V1 y V2 |
+| V6 | Añade `usuarios.version_perfil BIGINT NOT NULL DEFAULT 0` para bloqueo optimista | V1–V5 |
 
 Cada tabla se creará con InnoDB, charset/colación, PK, FK, CHECK, índices y restricciones acordados. En V2, prever `recetas.tipo VARCHAR(30)` y el CHECK de unidad/cantidad con tratamiento explícito de NULL y catálogo cerrado; en V3, las FK tipadas y CHECK por acción de la auditoría administrativa y las restricciones de pares de estados de moderación. No crear una FK polimórfica. `version_tokens` forma parte de V1; no se propone tabla de revocación individual de tokens. La configuración de MySQL debe verificar versión mínima 8.0.16, zona UTC y soporte de las colaciones; asegurar que Flyway corre con la base seleccionada y permisos mínimos necesarios. Antes de activar `ddl-auto=validate`, alinear nombres, tipos, precisión y convenciones con futuras entidades y comprobar en MySQL real.
 

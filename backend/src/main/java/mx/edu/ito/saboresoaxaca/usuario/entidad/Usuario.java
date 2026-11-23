@@ -7,11 +7,14 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
+import org.hibernate.annotations.DynamicUpdate;
 
 import java.time.LocalDateTime;
 import java.util.Objects;
 
 @Entity
+@DynamicUpdate
 @Table(name = "usuarios")
 public class Usuario {
     @Id
@@ -37,6 +40,10 @@ public class Usuario {
 
     @Column(name = "version_tokens", nullable = false, columnDefinition = "BIGINT UNSIGNED")
     private Long versionTokens = 0L;
+
+    @Version
+    @Column(name = "version_perfil", nullable = false)
+    private Long versionPerfil;
 
     @Column(name = "creado_en", nullable = false, columnDefinition = "DATETIME(6)")
     private LocalDateTime creadoEn;
@@ -65,6 +72,7 @@ public class Usuario {
     public String getBiografia() { return biografia; }
     public String getAvatarUrl() { return avatarUrl; }
     public Long getVersionTokens() { return versionTokens; }
+    public Long getVersionPerfil() { return versionPerfil; }
     public LocalDateTime getCreadoEn() { return creadoEn; }
     public LocalDateTime getActualizadoEn() { return actualizadoEn; }
     public LocalDateTime getEliminadoEn() { return eliminadoEn; }

@@ -22,6 +22,7 @@ Documento de diseño, no esquema ejecutado. Destino: MySQL 8.0.16 o superior, In
 | biografia | VARCHAR(1000) | opcional |
 | avatar_url | VARCHAR(2048) | opcional; referencia, no archivo |
 | version_tokens | BIGINT UNSIGNED | NN, inicial 0; invalidación global de credenciales |
+| version_perfil | BIGINT | NN, inicial 0; versión optimista de la fila, añadida en V6 |
 | creado_en, actualizado_en | DATETIME(6) | NN |
 | eliminado_en | DATETIME(6) | baja lógica |
 

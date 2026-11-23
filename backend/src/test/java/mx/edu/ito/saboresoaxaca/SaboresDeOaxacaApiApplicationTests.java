@@ -30,8 +30,8 @@ class SaboresDeOaxacaApiApplicationTests {
 
     @Test
     void otrasRutasYMetodosSeDeniegan() throws Exception {
-        mvc.perform(get("/api/v1/privado")).andExpect(status().isForbidden());
-        mvc.perform(post("/api/v1/public/health")).andExpect(status().isForbidden());
+        mvc.perform(get("/api/v1/privado")).andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/v1/public/health")).andExpect(status().isUnauthorized());
     }
 
 }

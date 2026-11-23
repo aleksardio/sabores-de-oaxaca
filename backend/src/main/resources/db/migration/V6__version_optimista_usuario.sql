@@ -1,0 +1,1 @@
+ALTER TABLE usuarios ADD COLUMN version_perfil BIGINT NOT NULL DEFAULT 0;
