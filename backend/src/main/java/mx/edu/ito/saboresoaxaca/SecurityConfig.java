@@ -15,6 +15,13 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import java.net.URI;
+import java.util.Arrays;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -25,6 +32,7 @@ class SecurityConfig {
     SecurityFilterChain securityFilterChain(HttpSecurity http, ObjectProvider<JwtDecoder> decoders,
                                             ObjectProvider<Converter<Jwt, AbstractAuthenticationToken>> converters) throws Exception {
         http.csrf(csrf -> csrf.disable())
+                .cors(cors -> { })
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
                 .requestMatchers(HttpMethod.GET, "/api/v1/public/health").permitAll()
@@ -56,6 +64,31 @@ class SecurityConfig {
                     .jwt(jwt -> jwt.decoder(decoder).jwtAuthenticationConverter(converters.getObject())));
         }
         return http.build();
+    }
+
+    @Bean
+    CorsConfigurationSource corsConfigurationSource(@Value("${app.cors.allowed-origins:}") String origenes) {
+        List<String> lista = Arrays.stream(origenes.split(","))
+                .map(String::trim).filter(s -> !s.isEmpty()).toList();
+        for (String origen : lista) {
+            URI uri;
+            try { uri = URI.create(origen); }
+            catch (IllegalArgumentException error) { throw new IllegalStateException("Origen CORS inválido", error); }
+            if (!("http".equals(uri.getScheme()) || "https".equals(uri.getScheme()))
+                    || uri.getHost() == null || uri.getUserInfo() != null || uri.getPort() > 65535
+                    || (uri.getRawPath() != null && !uri.getRawPath().isEmpty())
+                    || uri.getRawQuery() != null || uri.getRawFragment() != null || origen.contains("*")) {
+                throw new IllegalStateException("Origen CORS inválido: configure orígenes HTTP(S) exactos");
+            }
+        }
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowedOrigins(lista);
+        config.setAllowedMethods(List.of("GET", "POST"));
+        config.setAllowedHeaders(List.of("Content-Type", "Authorization"));
+        config.setAllowCredentials(false);
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/api/v1/**", config);
+        return source;
     }
 
     @Bean
