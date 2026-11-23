@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react'
+import { ApiError } from '../services/apiClient.js'
 
 const fieldDetails = {
   displayName: { label: 'Nombre visible', type: 'text', autoComplete: 'nickname' },
@@ -7,14 +8,18 @@ const fieldDetails = {
   confirmation: { label: 'Confirmar contraseña', type: 'password', autoComplete: 'new-password' },
 }
 
-export default function AuthForm({ fields, validate, submitLabel, showPasswordToggle = false, children }) {
+export default function AuthForm({ fields, validate, onSubmit, onSuccess, submitLabel, pendingLabel, showPasswordToggle = false, children }) {
   const id = useId()
   const formRef = useRef(null)
   const nextFieldToFocus = useRef(null)
   const [errors, setErrors] = useState({})
-  const [submitted, setSubmitted] = useState(false)
+  const activeRequest = useRef(null)
+  const validateOnChange = useRef(false)
   const [passwordVisible, setPasswordVisible] = useState(false)
-  const [status, setStatus] = useState('')
+  const [pending, setPending] = useState(false)
+  const [submitError, setSubmitError] = useState('')
+
+  useEffect(() => () => activeRequest.current?.abort(), [])
 
   useEffect(() => {
     const field = nextFieldToFocus.current
@@ -24,32 +29,53 @@ export default function AuthForm({ fields, validate, submitLabel, showPasswordTo
     }
   }, [errors])
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault()
+    if (activeRequest.current) return
+
     const form = event.currentTarget
-    const nextErrors = validate(new FormData(form))
+    const values = new FormData(form)
+    const nextErrors = validate(values)
     nextFieldToFocus.current = fields.find((field) => nextErrors[field])
     setErrors(nextErrors)
-    setSubmitted(Boolean(nextFieldToFocus.current))
+    setSubmitError('')
+    validateOnChange.current = Boolean(nextFieldToFocus.current)
 
-    if (nextFieldToFocus.current) {
-      setStatus('')
-      return
-    }
+    if (nextFieldToFocus.current) return
 
-    for (const field of fields) {
-      if (fieldDetails[field].type === 'password') {
-        form.elements.namedItem(field).value = ''
+    const controller = new AbortController()
+    activeRequest.current = controller
+    setPending(true)
+    let succeeded = false
+    try {
+      await onSubmit(values, controller.signal)
+      succeeded = true
+    } catch (error) {
+      if (controller.signal.aborted) return
+      const fieldErrors = error instanceof ApiError ? error.fields : {}
+      nextFieldToFocus.current = fields.find((field) => fieldErrors[field])
+      setErrors(fieldErrors)
+      setSubmitError(error instanceof ApiError ? error.message : 'No se pudo completar el envío.')
+    } finally {
+      if (!controller.signal.aborted) {
+        for (const field of fields) {
+          if (fieldDetails[field].type === 'password') form.elements.namedItem(field).value = ''
+        }
+        setPasswordVisible(false)
+        activeRequest.current = null
+        setPending(false)
       }
     }
-    setPasswordVisible(false)
-    setStatus('Formulario validado. Esta función estará disponible cuando conectemos el servidor.')
+    if (succeeded && !controller.signal.aborted) onSuccess?.()
   }
 
   function handleChange(event) {
-    setStatus('')
-    if (submitted) {
+    setSubmitError('')
+    if (validateOnChange.current) {
       setErrors(validate(new FormData(event.currentTarget)))
+    } else {
+      const field = event.target.name
+      setErrors((current) => ({ ...current, [field]: undefined }))
     }
   }
 
@@ -73,6 +99,7 @@ export default function AuthForm({ fields, validate, submitLabel, showPasswordTo
                   autoComplete={canToggle ? 'current-password' : autoComplete}
                   autoCapitalize={field === 'email' || type === 'password' ? 'none' : undefined}
                   spellCheck={field === 'email' || type === 'password' ? false : undefined}
+                  readOnly={pending}
                   required
                   aria-invalid={errors[field] ? true : undefined}
                   aria-describedby={errors[field] ? errorId : undefined}
@@ -83,6 +110,7 @@ export default function AuthForm({ fields, validate, submitLabel, showPasswordTo
                     type="button"
                     aria-controls={fieldId}
                     aria-label={passwordVisible ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                    disabled={pending}
                     onClick={() => setPasswordVisible((visible) => !visible)}
                   >
                     {passwordVisible ? 'Ocultar' : 'Mostrar'}
@@ -95,10 +123,13 @@ export default function AuthForm({ fields, validate, submitLabel, showPasswordTo
         })}
       </div>
       <div className="auth-actions">
-        <button className="site-button site-button--clay" type="submit">{submitLabel}</button>
+        <button className="site-button site-button--clay" type="submit" disabled={pending}>
+          {pending ? pendingLabel : submitLabel}
+        </button>
         {children}
       </div>
-      <p className="auth-status" role="status" aria-atomic="true">{status}</p>
+      <p className="auth-status" role="status">{pending ? pendingLabel : ''}</p>
+      <p className="auth-status auth-status--error" role="alert">{submitError}</p>
     </form>
   )
 }

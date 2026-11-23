@@ -6,8 +6,8 @@ detalle toman como referencia los frames «01 · Inicio público»,
 Las composiciones de tablet y móvil son adaptaciones del escritorio.
 Las ilustraciones se recrean con CSS y las fuentes Fraunces e Inter se cargan
 desde Google Fonts.
-No requiere iniciar el backend: el catálogo usa datos locales y los formularios
-de autenticación solo validan entradas en el navegador.
+El catálogo y los paneles de demostración usan datos locales. El registro,
+el inicio de sesión y el perfil propio sí requieren el backend.
 
 ## Instalar y ejecutar
 
@@ -22,6 +22,29 @@ npm run dev
 
 Abre la URL que indique Vite (habitualmente `http://localhost:5173`).
 
+### Backend para autenticación local
+
+1. Prepara JDK 17, MySQL 8 y una base local con permisos para las migraciones
+   Flyway. Configura `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` y `JWT_SECRET_BASE64`
+   según el [README del backend](../backend/README.md), sin versionar secretos.
+2. Desde `backend/`, arranca Spring Boot con `dev`:
+   `.\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=dev"`. No uses
+   `bootstrap`: no conecta a MySQL ni ofrece la autenticación real.
+3. Arranca Vite en otra terminal. El navegador usa rutas relativas `/api`;
+   solo `npm run dev` las reenvía a `http://localhost:8080`. `npm run preview`
+   y el build no incluyen ese proxy. Para desplegar, sirve `/api` en el
+   mismo origen con un proxy inverso. Si el equipo decide llamar a otro
+   origen directamente desde el navegador, Aleks deberá configurar CORS
+   para el origen concreto de Vite (esquema, host y puerto), solo para los
+   métodos y encabezados necesarios, nunca con `*`.
+
+Si no conecta o aparece un 5xx, comprueba que Spring Boot escuche en el
+puerto 8080 y haya iniciado con `dev`; revisa MySQL, Flyway y las variables
+requeridas. `/api/v1/public/health` sirve para confirmar que el proceso responde,
+pero no garantiza que la autenticación con MySQL funcione. Un 401 en login
+indica que las credenciales no son válidas; un 401 en `/me` o `/logout` indica
+que la sesión no es válida. Un 403 es falta de autorización, no un 401.
+
 ## Probar la navegación
 
 | Ruta | Qué comprobar |
@@ -33,14 +56,14 @@ Abre la URL que indique Vite (habitualmente `http://localhost:5173`).
 | `/tradiciones#regiones` | Acceso directo a la sección: el navegador desplaza la vista y enfoca el título. |
 | `/recetas/tlayuda` | Ingredientes, preparación, base de dos porciones y enlace de vuelta. |
 | `/recetas/no-existe` | El mensaje «Receta no encontrada» y el enlace al catálogo. |
-| `/perfil` | Estado de visitante, enlaces a login y registro y «Vista previa de diseño» no editable. |
+| `/perfil` | Enlaces a login y registro como visitante; nombre, correo, roles y cierre de sesión al autenticarte. |
 | `/autores` | Directorio de perfiles ficticios, marcados como ejemplos. |
 | `/autores/ejemplo` y `/autores/ejemplo-2` | Perfil público de demostración, aviso sobre las recetas asociadas y enlace al catálogo. |
 | `/autores/no-existe` | «Autor no encontrado» y enlace al directorio. |
 | `/favoritos` | Estado de visitante, enlaces a login y al catálogo, sin favoritos simulados. |
 | `/login` | Acceso con correo y contraseña, mostrar u ocultar contraseña y enlaces a alta y recuperación. |
 | `/registro` | Alta con nombre visible, correo, contraseña y confirmación. |
-| `/recuperar-contrasena` | Solicitud de recuperación por correo y enlace de regreso al login. |
+| `/recuperar-contrasena` | Aviso de función no disponible y enlace de regreso al login; no se envía correo. |
 | `/no-existe` | La página de ruta desconocida y el enlace al inicio. |
 
 Prueba también recargar directamente un detalle y navegar con una ventana
@@ -276,9 +299,8 @@ pantalla de Tradiciones del prototipo no se pudo verificar en Figma.
 - Usa los enlaces **Mi perfil**, **Autores** y **Favoritos** del pie público.
   Comprueba que **Iniciar sesión** y **Crear una cuenta** abren sus formularios
   sin la cabecera ni el pie públicos.
-- En **Mi perfil**, la vista previa muestra un nombre ficticio y los límites
-  de `nombre_visible` (100 caracteres) y `biografia` (opcional, hasta 1000).
-  No se usa una URL de avatar; `avatar_url` es opcional. No hay edición ni guardado.
+- En **Mi perfil**, una sesión confirmada muestra exclusivamente los datos
+  de `/me`. No hay edición de nombre, contraseña, avatar ni roles.
 - Abre los dos perfiles desde el directorio y prueba también un identificador
   desconocido. Los autores ficticios viven en `src/data/demoAuthors.js`; las 14
   recetas no tienen autor asignado y no se relacionan con esos perfiles.
@@ -301,10 +323,10 @@ por teclado y ausencia de desplazamiento horizontal a 320, 390, 768 y 1440 px.
 También se comprobó que Inicio, Catálogo, Detalle, Tradiciones y las tres rutas
 de autenticación siguen abriendo.
 
-Para la integración con Aleks quedan la sesión real, la consulta y edición del
-perfil propio, los perfiles públicos y su relación con recetas reales, y la
-consulta y gestión de favoritos propios. El servidor asignará `USUARIO` a cuentas
-nuevas, decidirá los permisos y verificará la cuenta activa y la propiedad.
+Para la integración con Aleks quedan la edición del perfil propio, los perfiles
+públicos y su relación con recetas reales y la gestión de favoritos.
+El servidor asigna `USUARIO` a cuentas nuevas y deberá verificar permisos,
+cuenta activa y propiedad en las futuras operaciones.
 Solo se mostrarán como favoritas las recetas visibles según el servidor:
 publicadas, no eliminadas y de autores activos.
 
@@ -314,25 +336,39 @@ Las tres rutas usan un layout propio inspirado en los frames 06, 07 y 08
 de Figma, sin la cabecera ni el pie públicos. En pantallas estrechas el
 panel de marca se compacta y el formulario queda en una columna.
 
-- En login, envía los campos vacíos, prueba un correo sin `@` y usa
-  **Mostrar/Ocultar contraseña** con el teclado.
-- En registro, prueba los campos vacíos, contraseñas diferentes, un nombre
-  de 101 caracteres o un correo de 255. Los máximos son 100 y 254,
-  respectivamente. No se solicita un rol ni se exige una composición de
-  contraseña pendiente de acuerdo con Aleks.
-- En recuperación, prueba un correo vacío y uno mal formado. Regresa a login
-  y recorre los enlaces a las tres pantallas y al inicio.
-- Al corregir un error, su mensaje debe desaparecer. Un envío válido solo
-  anuncia que la función estará disponible cuando se conecte el servidor.
-  No se inicia sesión, crea una cuenta ni envía un correo. No hay peticiones,
-  tokens ni almacenamiento de credenciales; las contraseñas se limpian tras
-  un envío válido.
-- Revisa las tres rutas a **320, 390, 768 y 1440 px**: sin desplazamiento
-  horizontal, con las acciones accesibles y scroll vertical cuando se necesite.
+1. **Registro:** `POST /api/v1/auth/registro` crea una cuenta (201) e
+   indica cómo iniciar sesión. No devuelve JWT ni inicia sesión. Un 409
+   señala correo duplicado; los 400 con errores de campo aparecen en el
+   formulario. Se comprueban los topes de 100 y 254 para nombre y correo,
+   8–72 caracteres y hasta 72 bytes UTF-8 para contraseña, más composición
+   y confirmación. La contraseña se envía sin recortarla ni modificarla.
+2. **Login:** `POST /api/v1/auth/login` devuelve un JWT provisional. El
+   frontend llama a `GET /api/v1/auth/me` con Bearer antes de mostrar una
+   sesión o navegar al perfil (o al destino interno permitido). Los roles
+   que muestra son los que devuelve el servidor; son acumulables.
+3. **Logout:** `POST /api/v1/auth/logout` recibe el Bearer sin cuerpo. Un
+   204 confirma que el servidor revocó **todos** los JWT de la cuenta,
+   incluidos los de otros dispositivos. Un 401 borra la sesión local
+   inválida. Una respuesta 409 o un fallo de conexión no se reintenta ni
+   confirma la revocación: se ofrece salir solo de este navegador.
 
-Para la integración faltan el contrato de la API, la política de contraseña,
-el manejo de sesión y destinos según permisos del servidor, y el flujo de
-restablecimiento desde un enlace de recuperación.
+El JWT se mantiene exclusivamente en memoria. Recargar por completo, cerrar
+la pestaña o abrir otra pestaña requiere iniciar sesión otra vez. La sesión
+local caduca según `expiraEnSegundos` (1800 por defecto); no hay refresh
+tokens. Salir localmente o recargar no equivale a revocar tokens en el
+servidor. Los paneles de cocinero, moderación y administración siguen siendo
+demostraciones sin protección ni operaciones de negocio reales. Con Aleks
+queda por acordar cómo preparar cuentas de prueba con los distintos roles
+antes de conectar permisos y proteger esos paneles.
+
+`npm test` simula HTTP sin llamar al backend: cubre los estados de los
+cuatro endpoints, errores de campo y red, carga de roles, cancelación, expiración,
+sesión no restaurada y el envío de credenciales solo donde corresponden.
+En Chromium, con HTTP simulado, se revisaron **320, 390, 768 y 1440 px**:
+Tab, foco visible, validación local, mensajes de error, botones deshabilitados
+durante el envío, pérdida de sesión al recargar y apertura de rutas públicas
+y de los tres paneles. Queda por repetir el flujo completo contra Spring Boot
+con MySQL y el perfil `dev`.
 
 ### Búsqueda y filtros del catálogo
 
@@ -377,7 +413,7 @@ demostrativas, no versiones históricas verificadas.
 ## Comprobaciones locales
 
 ```sh
-npm test         # Formularios, porciones, recetas, regiones, autores y paneles de demostración
+npm test         # Autenticación con HTTP simulado, recetas y paneles de demostración
 npm run build    # Genera dist/
 npm run lint     # Revisa el código con ESLint
 npm run preview  # Sirve la compilación localmente después de build

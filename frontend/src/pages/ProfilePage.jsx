@@ -1,41 +1,61 @@
 import { Link } from 'react-router'
-import { demoProfile } from '../data/demoProfile.js'
+import { useAuth } from '../auth/useAuth.js'
+import LogoutButton from '../components/LogoutButton.jsx'
 import '../styles/community.css'
 
+const roleLabels = {
+  USUARIO: 'Usuario',
+  COCINERO: 'Cocinero',
+  MODERADOR: 'Moderador',
+  ADMIN: 'Administrador',
+}
+
 export default function ProfilePage() {
+  const { user } = useAuth()
+
   return (
     <section className="community-page" aria-labelledby="profile-title">
       <header className="community-panel community-panel--hero">
         <p className="community-eyebrow">Tu cuenta</p>
         <h1 id="profile-title">Mi perfil</h1>
-        <p>Necesitas iniciar sesión para consultar y administrar tu perfil.</p>
-        <div className="community-actions">
-          <Link className="site-button site-button--green" to="/login">Iniciar sesión</Link>
-          <Link className="site-button" to="/registro">Crear una cuenta</Link>
-        </div>
+        {user ? (
+          <p>Consulta los datos de tu cuenta. La edición del perfil todavía no está disponible.</p>
+        ) : (
+          <>
+            <p>Necesitas iniciar sesión para consultar tu perfil.</p>
+            <div className="community-actions">
+              <Link className="site-button site-button--green" to="/login" state={{ from: '/perfil' }}>Iniciar sesión</Link>
+              <Link className="site-button" to="/registro">Crear una cuenta</Link>
+            </div>
+          </>
+        )}
       </header>
 
-      <section className="community-panel" aria-labelledby="profile-preview-title">
-        <p className="community-eyebrow">Ejemplo ficticio</p>
-        <h2 id="profile-preview-title">Vista previa de diseño</h2>
-        <p>Así se verá un perfil. La edición aún no está disponible.</p>
-        <div className="community-preview">
-          <div>
-            <span className="community-avatar" aria-hidden="true">{demoProfile.initials}</span>
-            <p>Avatar opcional</p>
-          </div>
-          <dl className="community-preview__fields">
+      {user && (
+        <section className="community-panel" aria-labelledby="profile-data-title">
+          <h2 id="profile-data-title">Datos de la cuenta</h2>
+          <dl className="community-profile-fields">
             <div>
-              <dt>Nombre visible <small>Hasta 100 caracteres</small></dt>
-              <dd>{demoProfile.nombre_visible}</dd>
+              <dt>Nombre visible</dt>
+              <dd>{user.nombreVisible}</dd>
             </div>
             <div>
-              <dt>Biografía <small>Opcional · Hasta 1000 caracteres</small></dt>
-              <dd>{demoProfile.biografia}</dd>
+              <dt>Correo electrónico</dt>
+              <dd>{user.correo}</dd>
+            </div>
+            <div>
+              <dt>Roles</dt>
+              <dd>{user.roles.length ? (
+                <ul>
+                  {user.roles.map((role) => <li key={role}>{Object.hasOwn(roleLabels, role) ? `${roleLabels[role]} (${role})` : role}</li>)}
+                </ul>
+              ) : 'Sin roles asignados.'}</dd>
             </div>
           </dl>
-        </div>
-      </section>
+          <p>Cerrar sesión revoca las sesiones de tu cuenta en todos los dispositivos.</p>
+          <LogoutButton />
+        </section>
+      )}
     </section>
   )
 }
