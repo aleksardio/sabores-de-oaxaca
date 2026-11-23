@@ -60,7 +60,7 @@ Cambiarla invalida los tokens anteriores. `JWT_ISSUER` y `JWT_AUDIENCE` son opci
 
 La validación usa tolerancia temporal de cero segundos: `iat` no puede estar en el futuro, `exp` debe ser posterior a `iat` y el token debe estar vigente. Sincroniza los relojes de las instancias.
 
-La API es stateless, no usa cookies de autenticación y tiene CSRF deshabilitado para Bearer en encabezado. Antes de introducir autenticación mediante cookies debe revisarse CSRF. No se habilita CORS global. Usar HTTPS fuera de pruebas locales.
+La API es stateless, no usa cookies de autenticación y tiene CSRF deshabilitado para Bearer en encabezado. Antes de introducir autenticación mediante cookies debe revisarse CSRF. CORS se configura por origen para `/api/v1/**`; consulta [integración React](INTEGRACION_REACT.md). Usar HTTPS fuera de pruebas locales.
 
 ## Bruno
 
