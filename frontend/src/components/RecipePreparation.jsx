@@ -1,5 +1,5 @@
 export default function RecipePreparation({ preparation }) {
-  const steps = preparation.split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
+  const steps = (preparation ?? '').split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
 
   return (
     <section className="detail-panel detail-preparation" aria-labelledby="detail-preparation-title">

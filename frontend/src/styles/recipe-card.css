@@ -1,6 +1,7 @@
 .dish-art {
   display: flex;
   min-width: 0;
+  overflow-wrap: anywhere;
   height: 143px;
   flex-direction: column;
   align-items: center;
@@ -50,6 +51,7 @@
   flex-direction: column;
   gap: 8px;
   min-width: 0;
+  overflow-wrap: anywhere;
   padding: 15px;
   border: 1px solid var(--border);
   border-radius: 14px;
@@ -88,4 +90,5 @@
 
 .featured-card__link {
   align-self: flex-start;
+  margin-block-start: auto;
 }

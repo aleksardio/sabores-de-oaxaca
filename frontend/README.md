@@ -6,8 +6,9 @@ detalle toman como referencia los frames «01 · Inicio público»,
 Las composiciones de tablet y móvil son adaptaciones del escritorio.
 Las ilustraciones se recrean con CSS y las fuentes Fraunces e Inter se cargan
 desde Google Fonts.
-El catálogo y los paneles de demostración usan datos locales. El registro,
-el inicio de sesión y el perfil propio sí requieren el backend.
+Inicio, el catálogo y el detalle consultan la API pública. El registro, el
+inicio de sesión y el perfil propio también requieren el backend. Los
+paneles de demostración conservan sus propios datos locales.
 
 ## Instalar y ejecutar
 
@@ -22,14 +23,16 @@ npm run dev
 
 Abre la URL que indique Vite (habitualmente `http://localhost:5173`).
 
-### Backend para autenticación local
+### Backend para catálogo y autenticación local
 
 1. Prepara JDK 17, MySQL 8 y una base local con permisos para las migraciones
    Flyway. Configura `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` y `JWT_SECRET_BASE64`
    según el [README del backend](../backend/README.md), sin versionar secretos.
 2. Desde `backend/`, arranca Spring Boot con `dev`:
    `.\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=dev"`. No uses
-   `bootstrap`: no conecta a MySQL ni ofrece la autenticación real.
+   `bootstrap`: no conecta a MySQL. Para probar con recetas visibles, usa
+   únicamente una base de desarrollo autorizada y sigue las instrucciones
+   de [datos de prueba locales](../backend/datos-demo-local/README.md).
 3. Arranca Vite en otra terminal. El navegador usa rutas relativas `/api`;
    solo `npm run dev` las reenvía a `http://localhost:8080`. `npm run preview`
    y el build no incluyen ese proxy. Para desplegar, sirve `/api` en el
@@ -49,13 +52,13 @@ que la sesión no es válida. Un 403 es falta de autorización, no un 401.
 
 | Ruta | Qué comprobar |
 | --- | --- |
-| `/` | La portada, «Explorar recetas», las tres tarjetas destacadas y sus enlaces «Ver receta». |
-| `/recetas` | El catálogo, la búsqueda, los filtros, las páginas de seis recetas y los enlaces a cada detalle. |
-| `/recetas?region=Mixteca` | El selector inicia en Mixteca y el catálogo muestra Memelas. |
-| `/tradiciones` | La introducción, las ocho regiones y los enlaces al catálogo. |
+| `/` | La portada, hasta tres recetas reales para descubrir y sus enlaces «Ver receta»; si no hay recetas, un estado vacío. |
+| `/recetas` | El catálogo, la búsqueda por título, el tipo, las categorías dinámicas y las páginas de seis recetas. |
+| `/recetas?region=Mixteca` | Aviso de filtro regional no disponible y enlace al catálogo completo. |
+| `/tradiciones` | La introducción, las ocho regiones editoriales y el enlace al catálogo completo. |
 | `/tradiciones#regiones` | Acceso directo a la sección: el navegador desplaza la vista y enfoca el título. |
-| `/recetas/tlayuda` | Ingredientes, preparación, base de dos porciones y enlace de vuelta. |
-| `/recetas/no-existe` | El mensaje «Receta no encontrada» y el enlace al catálogo. |
+| `/recetas/1` | Detalle y porciones base, si el ID 1 está disponible en la base; utiliza un ID visible del catálogo. |
+| `/recetas/no-existe` | «Receta no encontrada» sin hacer una solicitud con ID inválido. |
 | `/perfil` | Enlaces a login y registro como visitante; nombre, correo, roles y cierre de sesión al autenticarte. |
 | `/autores` | Directorio de perfiles ficticios, marcados como ejemplos. |
 | `/autores/ejemplo` y `/autores/ejemplo-2` | Perfil público de demostración, aviso sobre las recetas asociadas y enlace al catálogo. |
@@ -86,8 +89,8 @@ para **Ver demostración del panel**.
 Los ejemplos de `src/data/demoCookRecipes.js` cubren `BORRADOR`, `PENDIENTE`,
 `PUBLICADA`, `RECHAZADA` y `ARCHIVADA`. No son las recetas del catálogo público
 ni pertenecen a cuentas o autores de demostración. Las categorías de
-`src/data/recipeEditorOptions.js` son locales y se basan en el catálogo actual,
-no en una consulta a MySQL. Las rutas no están protegidas ni asignan roles.
+`src/data/recipeEditorOptions.js` son opciones locales de demostración, no
+una consulta a MySQL. Las rutas no están protegidas ni asignan roles.
 
 Puedes editar en memoria ejemplos en `BORRADOR` y practicar correcciones en
 `RECHAZADA`, sin reabrirlo ni cambiar su estado. `PENDIENTE` queda en lectura
@@ -281,12 +284,12 @@ y 150 para nombre de ingrediente.
 ### Tradiciones y regiones
 
 - Desde Inicio, pulsa **Tradiciones** en la barra para abrir la introducción.
-  **Conocer las regiones** en Inicio y **Por región** en el catálogo deben ir
+  **Conocer las regiones** en Inicio y el enlace cultural en el catálogo deben ir
   directamente a la sección de las ocho regiones. Abre también
   `/tradiciones#regiones` en una pestaña nueva.
-- Desde la tarjeta de Mixteca, pulsa **Ver recetas** y recarga el catálogo:
-  Mixteca y Memelas deben seguir seleccionada y visible, respectivamente.
-  Desde Cañada, comprueba que el catálogo indique **No encontramos recetas**.
+- Las ocho tarjetas son una guía cultural de `src/data/regions.js`, no una
+  clasificación de las recetas publicadas. El enlace de Tradiciones abre el
+  catálogo completo; los enlaces antiguos con `?region=…` muestran un aviso.
 - A **320, 390, 768 y 1440 px**, comprueba que se muestran las ocho tarjetas,
   en una, una, dos y cuatro columnas respectivamente, sin desplazamiento
   horizontal. Recorre los enlaces con Tab y comprueba que el foco es visible.
@@ -302,8 +305,8 @@ pantalla de Tradiciones del prototipo no se pudo verificar en Figma.
 - En **Mi perfil**, una sesión confirmada muestra exclusivamente los datos
   de `/me`. No hay edición de nombre, contraseña, avatar ni roles.
 - Abre los dos perfiles desde el directorio y prueba también un identificador
-  desconocido. Los autores ficticios viven en `src/data/demoAuthors.js`; las 14
-  recetas no tienen autor asignado y no se relacionan con esos perfiles.
+  desconocido. Los autores ficticios viven en `src/data/demoAuthors.js`;
+  no están relacionados con las recetas ni los autores de la API.
 - Desde cada autor y desde **Favoritos** puedes abrir el catálogo público.
   **Favoritos** no muestra ni guarda recetas personales. Estas vistas no crean
   sesiones, no hacen peticiones a la API y no guardan datos en el navegador.
@@ -370,50 +373,69 @@ durante el envío, pérdida de sesión al recargar y apertura de rutas públicas
 y de los tres paneles. Queda por repetir el flujo completo contra Spring Boot
 con MySQL y el perfil `dev`.
 
-### Búsqueda y filtros del catálogo
+### Recetario público
 
-- Escribe y pulsa **Enter** o **Buscar recetas**. La consulta ignora
-  mayúsculas y acentos y busca cada palabra en el nombre, los ingredientes,
-  la categoría, la región o la duración mostrada. Prueba `MAIZ MIXTECA`.
-- Se puede combinar una región con un filtro: **Tradicionales** usa la
-  marca de tradición, **Rápidas** incluye hasta **30 minutos**, **Dulces** y
-  **Bebidas** usan la categoría, y **Con video** usa un indicador de prueba
-  (no hay reproductor ni videos enlazados). **Todas** no limita por tipo.
-- Desde la página 2 del catálogo, cambia a **Valles Centrales** y comprueba
-  que `region` aparece en la URL y el listado vuelve a la página 1.
-  **Limpiar filtros** borra la búsqueda y elimina `region` sin quitar otros
-  parámetros. Con **Atrás** y **Adelante** el selector y los resultados
-  deben reflejar la URL. `?region=Desconocida` muestra todas las regiones.
+`src/services/recipesService.js` reutiliza `apiRequest` y su base `/api/v1`.
+Las cuatro consultas son `GET` y nunca envían Bearer ni cookies:
 
-Los registros y sus metadatos son provisionales. La API todavía no interviene
-en el listado, la búsqueda, los filtros, la paginación ni los detalles.
+| Consulta | Uso |
+| --- | --- |
+| `/api/v1/recetas` | Hasta tres recetas en Inicio (`tamano=3`) y seis por página en Catálogo (`tamano=6`). |
+| `/api/v1/categorias` | Opciones del filtro con IDs numéricos reales; una lista vacía no tiene sustitutos locales. |
+| `/api/v1/recetas/{id}` | Detalle por ID numérico, con ingredientes y porciones base. |
+| `/api/v1/recetas/{id}?porciones=2` | Ingredientes ajustados por el servidor; `porciones` admite enteros de 1 a 100. |
 
-### Detalle y calculadora de porciones
+El [contrato del backend](../backend/docs/RECETAS_PUBLICAS_API.md) admite
+`titulo` (subcadena de hasta 200 caracteres), `categoria` (ID positivo),
+`tipo` (`COMUN` o `TRADICIONAL_OAXAQUENA`), `pagina` (desde 0) y `tamano`
+(1 a 50). Introduce un título y pulsa **Enter** o **Buscar recetas**.
+Los filtros se combinan y al cambiarlos se vuelve a la primera página.
+La URL conserva los filtros y `pagina` desde cero: `?pagina=1` corresponde
+a la página 2 de la interfaz. Atrás y Adelante restauran la selección.
+Cada página usa `contenido`, `totalElementos` y `totalPaginas` del servidor;
+no se pagina en memoria. Inicio usa el orden de la API, no una selección editorial.
 
-- Recorre las tres páginas del catálogo (6, 6 y 2 tarjetas) y abre cada enlace
-  «Ver receta». Deben verse el nombre correspondiente, los ingredientes y la preparación.
-- En `/recetas/mole-negro`, prueba **4 → 2 → 6 → 4**. El pollo debe mostrar
-  **300 → 150 → 450 → 300 g**, y las tortillas **2 → 1 → 3 → 2 piezas**.
-  La URL no cambia. El botón activo se distingue visualmente y con `aria-pressed`.
-- En `/recetas/ensalada-de-nopales-con-quesillo`, el detalle abre para **3 personas**
-  sin que ninguno de los tres botones esté marcado. Al cambiar el número,
-  la sal sigue mostrando **«Al gusto»**.
-- Comprueba los anchos **320, 390, 768 y 1440 px** con las herramientas del
-  navegador. En celular las tarjetas se apilan; no debe aparecer desplazamiento horizontal.
-- Vuelve al catálogo y busca `MAIZ MIXTECA`: debe aparecer **Memelas**.
-  Comprueba también la paginación y la combinación de **Bebidas** con **Valles Centrales**.
+En el detalle, **2**, **4** y **6** son accesos rápidos; para otra cantidad,
+usa el campo de porciones y pulsa **Ajustar**. Al volver a la base se reutilizan
+las cantidades originales. Para cualquier otro valor válido, el frontend
+muestra `cantidadAjustada` tal como llega, con coma decimal y sin recalcular,
+redondear ni convertir unidades. Muestra «Al gusto» para `AL_GUSTO` y «≈ 0»
+si una cantidad positiva se redondeó a cero en el servidor. Al cambiar filtros
+o porciones se cancelan las consultas anteriores. Los fallos de ajuste no
+ocultan la preparación ni la información general de la receta.
 
-En `src/data/recipes.js`, `ingredients` conserva sus cadenas para la búsqueda.
-El detalle usa `baseServings`, `ingredientDetails` y `preparation`. Las cantidades
-base son decimales en texto con punto (o `null` para `AL_GUSTO`); la vista usa
-coma decimal y mantiene la unidad original. `preparation` es texto: cada línea
-no vacía se muestra como un paso. Las cantidades e instrucciones son
-demostrativas, no versiones históricas verificadas.
+Los enlaces de Inicio y Catálogo usan IDs de MySQL; no se intentan traducir
+los antiguos slugs ficticios (`mole-negro`, `tlayuda`, etc.). Un ID inválido
+o un 404 muestra «Receta no encontrada». No se imputa región ni duración,
+ni se ofrecen filtros por ingredientes o video. El listado no incluye fotos.
+En el detalle se usa la primera imagen HTTPS utilizable, con texto alternativo.
+Sin imagen (URL ausente, `*.invalid`, video o carga fallida) se muestra
+`DishIllustration`. No se reproducen videos. La preparación se muestra como
+texto, sin HTML, y puede estar vacía.
+
+Los tres paneles conservan `demoCookRecipes`, `recipeEditorOptions`,
+`demoModerationRecipes`, `demoModerationReports`, `demoAdminUsers`,
+`demoAdminRecipes` y `demoAdminCatalogs`. `demoAuthors` sigue alimentando el
+directorio ficticio; Favoritos aún no guarda recetas. `src/data/recipes.js`
+y `src/utils/servings.js` se conservan exclusivamente para las pruebas
+históricas de porciones y la comprobación de independencia del panel del
+cocinero. No son datos alternativos si falla la API.
+
+**Verificación:** `npm test` simula `fetch` y comprueba URLs, paginación,
+categorías, detalles, porciones, errores, cancelación y ausencia de Bearer.
+Pasaron las 85 pruebas, `npm run build`, `npm run lint` y `git diff --check`.
+En Chromium, con HTTP simulado a 320, 390, 768 y 1440 px, se revisaron
+Inicio, filtros y navegación por historial, detalle y calculadora, vacíos,
+errores y reintentos, foco visible, registro, login, perfil y acceso a los
+tres paneles. No se observó desplazamiento horizontal en esas vistas.
+La verificación de extremo a extremo contra un Spring Boot `dev` con MySQL
+y recetas publicadas queda pendiente. Conviene repetir con un catálogo vacío
+y otro de más de seis recetas, categorías múltiples, 404 y cantidades ajustadas.
 
 ## Comprobaciones locales
 
 ```sh
-npm test         # Autenticación con HTTP simulado, recetas y paneles de demostración
+npm test         # Autenticación y recetas públicas con HTTP simulado; paneles de demostración
 npm run build    # Genera dist/
 npm run lint     # Revisa el código con ESLint
 npm run preview  # Sirve la compilación localmente después de build
@@ -421,4 +443,4 @@ npm run preview  # Sirve la compilación localmente después de build
 
 En un servidor de producción, configura la entrega de `index.html` para las
 rutas del frontend que no sean archivos estáticos, de modo que React Router
-pueda resolver enlaces directos como `/recetas/tlayuda`.
+pueda resolver enlaces directos como `/recetas/1`.
