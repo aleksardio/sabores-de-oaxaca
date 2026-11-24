@@ -26,12 +26,11 @@ export default function ModerationReportDetailPage() {
               <div><dt>Motivo</dt><dd>{report.reason}</dd></div>
               <div>
                 <dt>Receta relacionada</dt>
-                <dd>{recipe ? <Link to={`/moderador/recetas/${recipe.id}`}>{recipe.title}</Link> : 'Receta no encontrada'}</dd>
+                <dd>{recipe ? `${recipe.title} (ejemplo sin detalle real)` : 'Receta de ejemplo no encontrada'}</dd>
               </div>
               {recipe && <div><dt>Estado de la receta</dt><dd><span className="cook-badge" data-state={recipe.state}>{moderationRecipeStates[recipe.state]}</span></dd></div>}
             </dl>
-            <p className="cook-muted">Resolver el reporte no cambia la receta. Si corresponde archivarla, se prepara como una decisión editorial separada.</p>
-            {recipe?.author.id === demoReviewerId && <p className="mod-restriction">No se ofrecen decisiones editoriales para esta receta porque su autor coincide con la referencia de prueba.</p>}
+            <p className="cook-muted">Este reporte de demostración no está asociado con ninguna receta real y no modifica su estado.</p>
           </section>
           <ModerationDecisionForm
             key={report.id}

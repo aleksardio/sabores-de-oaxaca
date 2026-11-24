@@ -14,7 +14,7 @@ export default function ModerationReportsPage() {
       <header>
         <p className="mod-eyebrow">Bandeja de reportes</p>
         <h1 id="mod-reports-heading">Reportes</h1>
-        <p className="cook-muted">Consulta motivos y fechas ficticias. El estado de un reporte es independiente del estado de su receta.</p>
+        <p className="cook-muted">Demostración sin API: los motivos, fechas y recetas son ficticios. No se pueden enviar decisiones.</p>
       </header>
       <ModerationQueue
         title="Reportes de ejemplo"

@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react'
 import { Link, useParams } from 'react-router'
-import { DishIllustration } from '../components/RecipeCard.jsx'
+import RecipeImage from '../components/RecipeImage.jsx'
 import FavoriteButton from '../components/FavoriteButton.jsx'
 import FavoritesStatus from '../components/FavoritesStatus.jsx'
 import RecipePreparation from '../components/RecipePreparation.jsx'
@@ -10,13 +10,6 @@ import { usePublicRequest } from '../hooks/usePublicRequest.js'
 import { getRecipeById, parseRecipeId, recipeTypes } from '../services/recipesService.js'
 import { recipeImage } from '../utils/publicRecipePresentation.js'
 import '../styles/recipe-detail.css'
-
-function RecipeImage({ image, title }) {
-  const [failed, setFailed] = useState(false)
-  if (!image || failed) return <DishIllustration label={title} variant="detail" />
-  return <img className="detail-photo" src={image.src} alt={image.alt || `Foto de ${title}`}
-    referrerPolicy="no-referrer" onError={() => setFailed(true)} />
-}
 
 function RecipeIngredients({ recipe }) {
   const { id, porcionesBase, ingredientes } = recipe

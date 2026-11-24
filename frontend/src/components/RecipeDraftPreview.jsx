@@ -1,17 +1,20 @@
 import { ingredientUnits, mediaTypes, recipeTypes } from '../data/recipeEditorOptions.js'
 import { isHttpsMediaUrl } from '../utils/recipeEditorValidation.js'
 import { DishIllustration } from './RecipeCard.jsx'
+import RecipeImage from './RecipeImage.jsx'
 import RecipePreparation from './RecipePreparation.jsx'
 import '../styles/recipe-detail.css'
 
-export default function RecipeDraftPreview({ recipe, heading, prefix = 'cook-preview', showReferences = false }) {
+export default function RecipeDraftPreview({ recipe, heading, prefix = 'cook-preview', showReferences = false, image }) {
   const byOrder = (a, b) => Number(a.order) - Number(b.order)
   const ingredients = recipe.ingredients.filter(({ name, ingredientId, quantity, note }) =>
     showReferences || name.trim() || ingredientId || quantity || note.trim()).sort(byOrder)
 
   return (
     <article className="recipe-detail cook-preview" aria-labelledby={`${prefix}-recipe`}>
-      <DishIllustration label="Ilustración de la receta" variant="detail" />
+      {image === undefined
+        ? <DishIllustration label="Ilustración de la receta" variant="detail" />
+        : <RecipeImage key={image?.src} image={image} title={recipe.title} />}
       <ul className="cook-preview-meta" role="list" aria-label="Datos de la receta">
         <li className="detail-badge">{recipeTypes[recipe.type] || 'Sin tipo'}</li>
         <li className="detail-badge">Porciones: {recipe.baseServings.trim() || 'sin indicar'}</li>
