@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { getCategories, getRecipeById, getRecipes, parseRecipeId, readCatalogFilters } from '../src/services/recipesService.js'
+import { getCategories, getIngredients, getRecipeById, getRecipes, parseRecipeId, readCatalogFilters } from '../src/services/recipesService.js'
 import { ingredientRows, recipeImage } from '../src/utils/publicRecipePresentation.js'
 
 const categories = [{ id: 7, nombre: 'Moles', descripcion: null }, { id: 8, nombre: 'Salsas', descripcion: 'De la milpa' }]
@@ -77,6 +77,45 @@ test('categorías 200 acepta descripciones nulas y categorías vacías', async (
   assert.deepEqual(await getCategories(), categories)
   assert.deepEqual(await getCategories(), [])
   assert.equal(urlAt(fetch).pathname, '/api/v1/categorias')
+})
+
+test('ingredientes conserva IDs y orden del servidor, admite vacío y no envía JWT ni cookies', async (t) => {
+  const ingredients = [{ id: Number.MAX_SAFE_INTEGER, nombre: 'Maíz' }, { id: 21, nombre: 'Masa de maíz' }]
+  const fetch = mockFetch(t, Response.json(ingredients), Response.json([]))
+  assert.deepEqual(await getIngredients(), ingredients)
+  assert.deepEqual(await getIngredients(), [])
+  for (const { arguments: [url, init] } of fetch.mock.calls) {
+    assert.equal(url, '/api/v1/ingredientes')
+    assert.deepEqual(init.headers, { Accept: 'application/json' })
+    assert.equal(init.method, 'GET')
+    assert.equal(init.credentials, 'omit')
+  }
+})
+
+test('ingredientes rechaza catálogos duplicados, malformados o con IDs inseguros', async (t) => {
+  const row = { id: 31, nombre: 'Maíz' }
+  const invalid = [null, {}, [null], [row, { ...row, nombre: 'Masa' }],
+    ...[0, -1, 1.2, '31', Number.MAX_SAFE_INTEGER + 1].map((id) => [{ ...row, id }]),
+    ...[undefined, ' ', '', 12].map((nombre) => [{ ...row, nombre }])]
+  mockFetch(t, ...invalid.map((data) => Response.json(data)), new Response('no es JSON'))
+  for (let i = 0; i <= invalid.length; i++) {
+    await assert.rejects(getIngredients(), { status: 200, message: /respuesta inesperada/ })
+  }
+})
+
+test('ingredientes distingue el error HTTP del error de conexión y cancela la respuesta obsoleta', async (t) => {
+  const controller = new AbortController()
+  const reply = Promise.withResolvers()
+  const fetch = mockFetch(t, new Response(null, { status: 503 }), () => { throw new TypeError('offline') }, () => reply.promise)
+  await assert.rejects(getIngredients(), { status: 503 })
+  await assert.rejects(getIngredients(), { status: 0, message: /conectar/ })
+  const pending = getIngredients(controller.signal)
+  assert.equal(fetch.mock.calls[2].arguments[1].signal, controller.signal)
+  controller.abort()
+  reply.resolve(Response.json([]))
+  await assert.rejects(pending, { name: 'AbortError' })
+  await assert.rejects(getIngredients(controller.signal), { name: 'AbortError' })
+  assert.equal(fetch.mock.callCount(), 3)
 })
 
 test('detalle 200 usa ID numérico, admite multimedia vacía y solicita la base sin query', async (t) => {

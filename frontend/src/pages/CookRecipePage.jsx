@@ -5,7 +5,7 @@ import RecipeEditorForm from '../components/RecipeEditorForm.jsx'
 import RequestError from '../components/RequestError.jsx'
 import { useCookRecipes } from '../hooks/useCookRecipes.js'
 import { usePublicRequest } from '../hooks/usePublicRequest.js'
-import { getCategories, parseRecipeId } from '../services/recipesService.js'
+import { getCategories, getIngredients, parseRecipeId } from '../services/recipesService.js'
 import { canDeleteRecipe, canEditRecipe, canReviewRecipe, canWriteRecipes, recipeStates } from '../utils/cookRecipeRules.js'
 import { blankDraft, draftFromDetail, toRecipeBody, validateRecipeDraft, validateRecipeForReview } from '../utils/recipeEditorValidation.js'
 import { createRecipeOperation, resolveRecipeConflict, saveAndRequestReview } from '../utils/cookRecipeActions.js'
@@ -91,6 +91,7 @@ function RecipeWorkspace({ mode, initialRecipe, user, service, created }) {
   const formAvailable = creating || editing
   const dirty = draft !== baseline
   const categories = usePublicRequest(formAvailable ? getCategories : null)
+  const ingredients = usePublicRequest(formAvailable ? getIngredients : null)
 
   async function run(action, onError) {
     const attempt = operation.start()
@@ -126,13 +127,15 @@ function RecipeWorkspace({ mode, initialRecipe, user, service, created }) {
         return
       }
       if (review) {
-        const saved = await saveAndRequestReview(service, record, dirty ? body : null, signal, (updated) => {
+        const changedBody = dirty && JSON.stringify(body) !== JSON.stringify(toRecipeBody(baseline)) ? body : null
+        const saved = await saveAndRequestReview(service, record, changedBody, signal, (updated) => {
           setRecord(updated)
           setBaseline(draft)
           setNotice('Cambios guardados. El envío a revisión aún no se ha confirmado.')
         })
         if (!saved) return
         setRecord({ ...record, ...saved })
+        setBaseline(draft)
         setPreview(false)
         setNotice('Receta enviada a revisión. Está pendiente, no publicada.')
         return
@@ -195,7 +198,8 @@ function RecipeWorkspace({ mode, initialRecipe, user, service, created }) {
         <BackToList />
         <h1 id="cook-workspace-title">{creating ? 'Crear receta' : editing ? 'Editar receta' : 'Detalle de la receta'}</h1>
         {record && <RecipeStatus record={record} />}
-        {record?.estado === 'RECHAZADA' && <p className="cook-muted">Una receta rechazada activa puede editarse con el rol COCINERO, pero guardarla no cambia su estado. La API actual no permite reenviarla a revisión.</p>}
+        {record?.estado === 'RECHAZADA' && canReviewRecipe(user, record) && !deletionConfirmed &&
+          <p className="cook-muted">Puedes corregir esta receta y enviarla nuevamente a revisión.</p>}
         {dirty && formAvailable && <p className="cook-muted">Hay cambios sin guardar.</p>}
       </header>
       {pending && <p role="status">Operación en curso…</p>}
@@ -214,7 +218,9 @@ function RecipeWorkspace({ mode, initialRecipe, user, service, created }) {
       )}
       {!formAvailable || preview ? <RecipeDraftPreview recipe={formAvailable ? draft : baseline} /> : (
         <RecipeEditorForm draft={draft} onChange={setDraft} errors={errors} pending={pending} blocked={Boolean(conflict || confirmDelete)}
-          creating={creating} categories={categories} onSave={() => save()} onReview={canReviewRecipe(user, record) ? () => save(true) : null} />
+          creating={creating} categories={categories} ingredients={ingredients} onSave={() => save()}
+          onReview={canReviewRecipe(user, record) ? () => save(true) : null}
+          reviewLabel={record?.estado === 'RECHAZADA' ? 'Reenviar a revisión' : 'Enviar a revisión'} />
       )}
       {!formAvailable && dirty && !deletionConfirmed && (
         <details className="cook-panel">

@@ -90,9 +90,10 @@ El JWT solo vive en memoria.
 | `GET /mis-recetas/{id}` | Consulta el detalle propio, incluidas las bajas, antes de editar o previsualizar. |
 | `POST /mis-recetas` | Crea un borrador sin enviar versión, autor ni estado. Tras `201` abre su editor. |
 | `PUT /mis-recetas/{id}` | Reemplaza el contenido completo, con `version` en el JSON. Solo `BORRADOR` y `RECHAZADA` activas. Conserva la nueva versión del `200`. |
-| `POST /mis-recetas/{id}/enviar-revision` | Solo borrador activo y completo. Si hay cambios locales, los guarda primero. Envía `If-Match: "versión"` (p. ej. `"0"`), sin cuerpo. El `200` devuelve la nueva versión y `PENDIENTE`, no `PUBLICADA`. |
+| `POST /mis-recetas/{id}/enviar-revision` | Envía `BORRADOR` o reenvía `RECHAZADA`, siempre que sea propia, activa y completa. Si hay cambios, primero los guarda por PUT. Envía `If-Match` con la versión vigente entre comillas (p. ej. `"4"`), sin cuerpo. Solo tras un `200` válido muestra `PENDIENTE`, no `PUBLICADA`. |
 | `DELETE /mis-recetas/{id}` | Confirma explícitamente y envía `If-Match` entre comillas, sin cuerpo. Tras `204` vuelve a consultar el detalle. La baja no cambia el estado editorial y no se puede restaurar desde aquí. |
 | `GET /categorias` | Carga el catálogo con el servicio público existente, sin Bearer. |
+| `GET /ingredientes` | Carga el catálogo público sin JWT como un arreglo de `{id, nombre}` en el orden del servidor. |
 
 Contrato: [RECETAS_COCINERO_API.md](../backend/docs/RECETAS_COCINERO_API.md).
 El borrador permite guardar sin categorías, ingredientes ni multimedia.
@@ -101,13 +102,27 @@ solo admite referencias HTTPS (`IMAGEN` o `VIDEO`), sin subida de archivos.
 El editor conserva los IDs, nombres y cantidades base del detalle y vuelve
 a enviar las asociaciones completas al guardar.
 
-- **Ingredientes:** no existe un endpoint de catálogo documentado. Hasta
-  que haya un contrato oficial, introduce el ID numérico de un ingrediente
-  existente proporcionado por **Aleks**. El servidor valida si existe. No
-  hay IDs predeterminados ni se consulta `/ingredientes`.
-- **Aviso para Aleks — recetas rechazadas:** editar no cambia `RECHAZADA`
-  a `BORRADOR` y el contrato actual no permite reenviarlas. No se simula una
-  transición ni se habilita un botón de reenvío.
+- **Ingredientes:** el selector reemplaza el campo manual: muestra nombres
+  de `GET /api/v1/ingredientes` y usa los IDs reales. Impide duplicados
+  y conserva cantidad, unidad, orden y nota al sustituir un ingrediente.
+  **Buscar ingrediente por nombre** filtra de inmediato los selectores de
+  todas las filas, sin nuevas solicitudes HTTP. No distingue mayúsculas ni
+  acentos: `maiz` encuentra `Maíz` y `Masa de maíz` si están en el catálogo.
+  Aunque no coincidan, los ingredientes seleccionados siguen visibles.
+  Si no hay coincidencias, se muestra un aviso; borra la búsqueda para ver
+  todas las opciones y usa Tab para pasar del campo a los selectores.
+  La vista previa muestra el nombre; el JSON envía `ingredienteId`, no
+  el nombre. El editor indica carga, catálogo vacío, error de conexión o
+  respuesta inesperada. Puedes reintentar sin perder datos ni bloquear el
+  resto del formulario. Si el catálogo no incluye un ingrediente existente,
+  conserva su ID y nombre, lo marca como no disponible y permite quitarlo
+  o sustituirlo. El servidor valida definitivamente las referencias.
+- **Reenvío:** usa **Reenviar a revisión** desde el editor de una receta
+  rechazada. No requiere una modificación si ya está completa. Un PUT exitoso
+  conserva `RECHAZADA` y devuelve la versión para el POST; un PUT fallido
+  impide el POST. Si falla el POST después del PUT, los cambios guardados y
+  su versión se conservan. No se muestra un motivo de rechazo que el detalle
+  privado no devuelve.
 - **Conflictos (`409`):** se conservan los cambios en el editor. Consulta el
   detalle del servidor, compara ambas versiones y elige qué datos usar.
   Adoptar la versión no escribe ni reintenta; si aún se puede editar,
@@ -117,17 +132,34 @@ a enviar las asociaciones completas al guardar.
   barra lateral, tarjetas de resumen, tabla, formulario y vista previa.
   En móvil la navegación pasa arriba y la tabla se apila.
 
-**Verificación:** `npm test` simula `fetch` para comprobar listado, detalle,
-creación, edición, baja, revisión, versiones, roles, validación, errores,
-cancelación y bloqueo de envíos duplicados. En Chromium con HTTP simulado
-se probaron listado, detalle, edición, creación y comparación `409` a
-320, 390, 768 y 1440 px sin desplazamiento horizontal; también el retorno
-de login, el modo de solo lectura, el recetario y agregar/quitar favoritos.
-Queda pendiente el flujo de
-extremo a extremo contra Spring Boot + MySQL con cuentas autorizadas:
-probar un `COCINERO`, una cuenta sin ese rol (o `ADMIN` sin `COCINERO`),
-IDs de categorías e ingredientes provistos en ese entorno, paginación,
-concurrencia real y consistencia de la baja con el catálogo público.
+**Cómo comprobar el flujo desde React:** usa HTTP simulado o un entorno de
+desarrollo aislado y autorizado; nunca producción.
+
+1. Inicia sesión como `COCINERO` y abre **Mis recetas → Nueva receta**.
+   Comprueba en Red el GET público de ingredientes sin Bearer. Guarda un
+   borrador sin ingredientes; vuelve a editarlo, elige una categoría y agrega
+   ingredientes. Busca por nombre sin acentos; comprueba que no se hagan
+   nuevos GET ni se pierdan las selecciones al cambiar o borrar la búsqueda.
+   Comprueba que no se repiten, que la vista previa muestra
+   nombres y que las cantidades y notas se conservan al sustituirlos.
+2. Usa **Enviar a revisión**. Con otra cuenta de prueba autorizada, rechaza
+   la receta desde moderación. Vuelve a abrirla como su cocinero: comprueba el
+   aviso y el botón **Reenviar a revisión**.
+3. Corrige la receta y reenvíala. En Red, verifica que el PUT usa la versión del
+   detalle y que el POST no lleva cuerpo y usa, entre comillas, la versión
+   devuelta por el PUT. Comprueba que solo se muestra **Pendiente** tras el
+   éxito y que aún no está publicada. Con otra receta rechazada ya completa,
+   reenvía sin tocar campos y verifica que se hace solo el POST.
+4. Con HTTP simulado, prueba catálogo vacío (`[]`), fallo de red, respuesta
+   inválida y reintento sin perder cambios. Simula `409` y comprueba que la
+   comparación se abre sin reintentos de escritura. Revisa el selector y
+   la vista previa a 320, 390, 768 y 1440 px.
+
+`npm test` comprueba estos contratos con HTTP simulado. En Chromium, también
+con HTTP simulado, se comprobaron creación, edición, catálogo vacío y fallido,
+selector por teclado, vista previa, rechazo, reenvío y `409` a 320, 390, 768 y
+1440 px, sin desplazamiento horizontal. La validación de extremo a extremo
+con Spring Boot y MySQL (roles, referencias y concurrencia real) queda pendiente.
 
 ### Panel de moderación
 
@@ -370,12 +402,13 @@ con MySQL y el perfil `dev`.
 ### Recetario público
 
 `src/services/recipesService.js` reutiliza `apiRequest` y su base `/api/v1`.
-Las cuatro consultas son `GET` y nunca envían Bearer ni cookies:
+Las consultas son `GET` y nunca envían Bearer ni cookies:
 
 | Consulta | Uso |
 | --- | --- |
 | `/api/v1/recetas` | Hasta tres recetas en Inicio (`tamano=3`) y seis por página en Catálogo (`tamano=6`). |
 | `/api/v1/categorias` | Opciones del filtro con IDs numéricos reales; una lista vacía no tiene sustitutos locales. |
+| `/api/v1/ingredientes` | Opciones para el editor de cocinero con nombres e IDs reales; una lista vacía no tiene sustitutos locales. |
 | `/api/v1/recetas/{id}` | Detalle por ID numérico, con ingredientes y porciones base. |
 | `/api/v1/recetas/{id}?porciones=2` | Ingredientes ajustados por el servidor; `porciones` admite enteros de 1 a 100. |
 

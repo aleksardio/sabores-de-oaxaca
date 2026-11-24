@@ -1,3 +1,5 @@
+import { isReviewableRecipe } from './cookRecipeRules.js'
+
 // Acquire synchronously: two events can arrive before React disables the buttons.
 export function createRecipeOperation() {
   let active
@@ -18,11 +20,12 @@ export function createRecipeOperation() {
 }
 
 export async function saveAndRequestReview(service, record, body, signal, onSaved) {
+  if (!isReviewableRecipe(record)) return null
   if (body) {
     const receipt = await service.update(record.id, body, record.version, signal)
     record = { ...record, ...receipt }
     onSaved(record)
-    if (record.estado !== 'BORRADOR') return null
+    if (!isReviewableRecipe(record)) return null
   }
   return service.review(record.id, record.version, signal)
 }
