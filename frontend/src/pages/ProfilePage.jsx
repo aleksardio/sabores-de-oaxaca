@@ -1,6 +1,7 @@
 import { Link } from 'react-router'
 import { useAuth } from '../auth/useAuth.js'
 import LogoutButton from '../components/LogoutButton.jsx'
+import { canModerate } from '../utils/moderationAccess.js'
 import '../styles/community.css'
 
 const roleLabels = {
@@ -55,6 +56,7 @@ export default function ProfilePage() {
           <p>Cerrar sesión revoca las sesiones de tu cuenta en todos los dispositivos.</p>
           <div className="community-actions">
             <Link className="site-button site-button--green" to="/cocinero/recetas">Mis recetas</Link>
+            {canModerate(user) && <Link className="site-button" to="/moderador/recetas">Panel de moderación</Link>}
             <LogoutButton />
           </div>
         </section>

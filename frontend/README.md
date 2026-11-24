@@ -7,9 +7,9 @@ Las composiciones de tablet y móvil son adaptaciones del escritorio.
 Las ilustraciones se recrean con CSS y las fuentes Fraunces e Inter se cargan
 desde Google Fonts.
 Inicio, el catálogo y el detalle consultan la API pública. El registro, el
-inicio de sesión, el perfil, los favoritos y el panel del cocinero también
-requieren el backend. Moderación, reportes y administración siguen siendo
-demostraciones con datos locales.
+inicio de sesión, el perfil, los favoritos, el panel del cocinero y la
+moderación de recetas también requieren el backend. Reportes y administración
+siguen siendo demostraciones con datos locales.
 
 ## Instalar y ejecutar
 
@@ -129,73 +129,63 @@ probar un `COCINERO`, una cuenta sin ese rol (o `ADMIN` sin `COCINERO`),
 IDs de categorías e ingredientes provistos en ese entorno, paginación,
 concurrencia real y consistencia de la baja con el catálogo público.
 
-### Panel de moderación (demostración visual)
+### Panel de moderación
 
-| Ruta | Qué muestra |
+Abre **Panel de moderación** desde el perfil o entra a `/moderador`, que
+redirige a `/moderador/recetas`. Sin sesión se abre el login con retorno
+interno validado. Se admite `MODERADOR` o `ADMIN`, sin jerarquía entre roles;
+sin esos roles no se hacen consultas privadas de moderación. Ninguna cuenta
+puede decidir sobre sus propias recetas, aunque tenga ambos roles. Spring Boot
+conserva la autorización definitiva. Un `401` invalida la sesión; un `403` no.
+
+| Endpoint bajo `/api/v1` | Operación |
 | --- | --- |
-| `/moderador` | Redirige a `/moderador/recetas`. |
-| `/moderador/recetas` | Cola de revisión, conteos por estado, filtro y búsqueda por título. |
-| `/moderador/recetas/:id` | Autor ficticio, receta de solo lectura y preparación de decisiones editoriales. |
-| `/moderador/reportes` | Conteos, filtro y búsqueda por título de la receta relacionada. |
-| `/moderador/reportes/:id` | Motivo, fecha ficticia, enlace a la receta y preparación de decisiones del reporte. |
+| `GET /moderacion/recetas?pagina=0&tamano=12&tipo=COMUN` | Cola de pendientes no eliminadas. `pagina` comienza en cero; `tipo` es opcional y admite `COMUN` o `TRADICIONAL_OAXAQUENA`. El servidor filtra y pagina. |
+| `GET /moderacion/recetas/{id}` | Detalle pendiente de solo lectura, incluida la versión vigente. Muestra cantidades base sin recalcular y referencias multimedia sin incrustar videos ni HTML. |
+| `POST /moderacion/recetas/{id}/aprobar` | Tras confirmación explícita, sin cuerpo. Solo después de un `200` válido se muestra el resultado y el enlace público `/recetas/{id}`. El catálogo sigue leyendo su propia API. |
+| `POST /moderacion/recetas/{id}/rechazar` | Tras confirmación explícita, envía solo `{"motivo":"…"}`. El motivo es obligatorio y admite hasta 1000 caracteres tras quitar espacios extremos. No publica la receta. |
 
-Las rutas no están protegidas ni simulan una cuenta o un rol. Los ejemplos de
-`src/data/demoModerationRecipes.js` y `src/data/demoModerationReports.js` son
-independientes del catálogo público y del panel del cocinero. `demoReviewerId`
-es solo una referencia para comprobar si coincide la autoría o el reportante.
+Ambos POST llevan `If-Match` entre comillas, por ejemplo `"3"`, con la
+versión del último detalle consultado, no la del listado. Después de
+una decisión confirmada se deshabilitan ambas acciones y al volver a la cola
+se obtiene una página nueva del servidor. Ante `409`, un fallo de red, un
+5xx o una respuesta de éxito inesperada, se vuelve a consultar el detalle:
+se conserva el motivo y se requiere una nueva confirmación si aún está
+pendiente. No se repite automáticamente ningún POST. Un `404` solo indica
+que la receta ya no está disponible para moderación; no revela su estado.
 
-| Recurso | Transiciones que se pueden preparar |
-| --- | --- |
-| Receta `PENDIENTE` | Aprobar → `PUBLICADA`; rechazar → `RECHAZADA` (con justificación). |
-| Receta `PUBLICADA` | Archivar → `ARCHIVADA` (con justificación). Retirarla a `BORRADOR` corresponde al autor. |
-| Receta `ARCHIVADA` | Restaurar → `PENDIENTE` para revisar de nuevo. |
-| Receta `BORRADOR` o `RECHAZADA` | Sin acciones de moderación. El autor debe preparar o corregir el contenido y enviarlo a revisión. |
-| Reporte `ABIERTO` | Pasar a `EN_REVISION`. |
-| Reporte `EN_REVISION` | Resolver → `RESUELTO` o descartar → `DESCARTADO`, ambos con justificación. |
-| Reporte `RESUELTO` o `DESCARTADO` | Sin más acciones. |
+Spring Boot registra el evento en `auditoria_moderacion` dentro de la misma
+transacción que la decisión. React no escribe auditorías, no envía actor,
+autor, estados ni fechas y no muestra historial. Reportes conserva vistas
+de demostración separadas, sin escrituras ni enlaces a recetas reales. No
+se pueden archivar, restaurar, reenviar o editar recetas ni administrar
+usuarios desde moderación. El panel de administración sigue siendo una demo.
 
-La coincidencia de autor bloquea toda decisión editorial; la coincidencia de
-reportante bloquea toda decisión sobre el reporte. Gestionar un reporte y
-moderar la receta son operaciones independientes: resolverlo no archiva la
-receta. El formulario solo comprueba requisitos y muestra una propuesta
-temporal. Confirmar sigue deshabilitado; no hay peticiones a la API, cambios
-de estado, almacenamiento en el navegador ni eventos de auditoría en React.
+**Validación de extremo a extremo** (solo en un entorno autorizado):
 
-**Figma:** se revisaron 15 «Panel», 16 «Revisar recetas», 17 «Reportes» y el
-modal 23 de confirmación de eliminación. Se mantienen la barra lateral café,
-el fondo crema y los resúmenes en tarjetas; `/moderador` lleva a la cola
-en lugar de abrir otro tablero. Se usan tarjetas en lugar de tablas,
-conteos derivados de los ejemplos y filtros locales por estado y búsqueda,
-sin paginación ficticia, filtros de región/fecha ni controles de sesión.
-No se usa «Reportada» como estado editorial ni «Pendiente» como estado de
-reporte. En vez del modal de eliminación se prepara una decisión en el
-detalle con confirmación deshabilitada. No se localizaron frames específicos
-de detalle de moderación para una receta o un reporte; no se compararon
-esas vistas con Figma.
+1. Arranca el backend con `dev` y una base de pruebas aislada, y Vite con
+   las instrucciones anteriores. Usa cuentas de prueba con roles asignados
+   por el equipo del backend, nunca credenciales ni servidores de producción.
+2. Con una cuenta `COCINERO`, crea y envía dos borradores completos a revisión.
+   Con `USUARIO` o un `COCINERO` sin rol editorial, verifica el acceso denegado.
+   Con `MODERADOR` y con `ADMIN`, verifica el acceso, filtros y paginación
+   (prepara más de 12 pendientes). Con una cuenta que también sea autora,
+   verifica que no aparecen acciones sobre sus propias recetas.
+3. Aprueba una receta de otro autor, vuelve a la lista y verifica que ya no
+   aparece. Abre su enlace público y comprueba la publicación desde el
+   catálogo. Rechaza la otra con un motivo válido: también debe salir de la
+   cola, pero no debe aparecer en el catálogo.
+4. Abre una misma pendiente en dos sesiones de prueba; decide primero en
+   una y confirma después en la otra. Verifica el conflicto y el nuevo GET,
+   sin repetición del POST, sin perder el motivo y sin inferir el estado a
+   partir de un `404`. Con acceso autorizado a la base de pruebas, comprueba
+   que hay un solo evento de auditoría por decisión efectiva.
 
-**Pruebas:** `npm test` cubre transiciones, restricciones, justificación,
-IDs inexistentes y que preparar una resolución no modifica la receta.
-Para verificar en el navegador:
-
-- Filtra las recetas por `Pendiente`, busca un título que no exista y limpia
-  los filtros. Abre `demo-tamales-hongos`, comprueba el error sin acción y el
-  error de rechazo sin justificación. Completa el campo, revisa la vista
-  previa y recarga: la receta sigue pendiente y el formulario se reinicia.
-  En `demo-crema-milpa` no debe ofrecerse ninguna acción editorial.
-- En reportes, combina búsqueda y filtro. En `REP-002`, prepara resolver o
-  descartar y abre la receta enlazada; ambos estados deben conservarse.
-  En `REP-005` no debe haber acciones sobre el reporte; en `REP-006` sí,
-  pero la receta enlazada no debe ofrecer acciones editoriales.
-- Prueba `no-existe` en ambos detalles y los enlaces de regreso y al sitio
-  público. Recorre los controles con Tab. Se verificaron las colas y los
-  detalles a **320, 390, 768 y 1440 px**, sin desplazamiento horizontal.
-
-**Integración con Aleks:** acordar el contrato de lectura y decisiones,
-conectar autenticación, permisos, estados e identificadores reales y
-gestionar errores y conflictos por cambios de estado concurrentes. Spring
-Boot debe verificar cuenta activa, permisos, autoría, reportante, transición
-y justificación, y registrar cada decisión efectiva y su auditoría en la
-misma transacción.
+Contrato: [MODERACION_API.md](../backend/docs/MODERACION_API.md).
+`npm test` cubre moderación con HTTP simulado. En Chromium, también con HTTP
+simulado, se revisaron cola, detalle, confirmaciones, resultados, reintento y
+conflictos a **320, 390, 768 y 1440 px**, sin desplazamiento horizontal.
+La verificación transaccional contra Spring Boot y MySQL queda pendiente.
 
 ### Panel de administración (demostración visual)
 
@@ -365,8 +355,8 @@ El JWT se mantiene exclusivamente en memoria. Recargar por completo, cerrar
 la pestaña o abrir otra pestaña requiere iniciar sesión otra vez. La sesión
 local caduca según `expiraEnSegundos` (1800 por defecto); no hay refresh
 tokens. Salir localmente o recargar no equivale a revocar tokens en el
-servidor. Moderación y administración siguen siendo demostraciones sin
-protección ni operaciones de negocio reales.
+servidor. Moderación de recetas usa esa sesión; administración sigue siendo
+una demostración sin operaciones reales.
 
 `npm test` simula HTTP sin llamar al backend: cubre los estados de los
 cuatro endpoints, errores de campo y red, carga de roles, cancelación, expiración,
@@ -417,9 +407,10 @@ Sin imagen (URL ausente, `*.invalid`, video o carga fallida) se muestra
 `DishIllustration`. No se reproducen videos. La preparación se muestra como
 texto, sin HTML, y puede estar vacía.
 
-Moderación y administración conservan `demoModerationRecipes`,
-`demoModerationReports`, `demoAdminUsers`, `demoAdminRecipes` y
-`demoAdminCatalogs`. `demoAuthors` sigue alimentando el directorio ficticio.
+Reportes y administración conservan datos de demostración en
+`demoModerationRecipes`, `demoModerationReports`, `demoAdminUsers`,
+`demoAdminRecipes` y `demoAdminCatalogs`. No son un respaldo de la cola real.
+`demoAuthors` sigue alimentando el directorio ficticio.
 `demoCookRecipes`, `src/data/recipes.js` y `src/utils/servings.js` se
 conservan para pruebas históricas y no son datos alternativos si falla la API.
 
@@ -437,7 +428,7 @@ y otro de más de seis recetas, categorías múltiples, 404 y cantidades ajustad
 ## Comprobaciones locales
 
 ```sh
-npm test         # Autenticación, favoritos, recetario y panel de cocinero con HTTP simulado
+npm test         # Autenticación, favoritos, recetario, cocinero y moderación con HTTP simulado
 npm run build    # Genera dist/
 npm run lint     # Revisa el código con ESLint
 npm run preview  # Sirve la compilación localmente después de build

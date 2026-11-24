@@ -111,3 +111,21 @@
   padding-top: 0.75rem;
   border-top: 1px solid var(--border);
 }
+
+.cook-filters + .mod-cards {
+  margin-top: 0.85rem;
+}
+
+.mod-confirm-actions {
+  margin-top: 0.75rem;
+}
+
+.mod-result p {
+  margin-top: 0;
+}
+
+@media (max-width: 56rem) {
+  .mod-layout {
+    grid-template-rows: auto 1fr;
+  }
+}
