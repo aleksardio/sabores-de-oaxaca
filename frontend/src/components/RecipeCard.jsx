@@ -14,7 +14,7 @@ export function DishIllustration({ label, tone = 'gold', decorative = true, vari
   )
 }
 
-export default function RecipeCard({ recipe }) {
+export default function RecipeCard({ recipe, favoriteAction }) {
   const { id, titulo, descripcion, tipo, autor, categorias } = recipe
   const type = recipeTypes.find(({ value }) => value === tipo)?.name
   return (
@@ -32,6 +32,7 @@ export default function RecipeCard({ recipe }) {
       <Link className="site-button featured-card__link" to={`/recetas/${id}`} aria-label={`Ver receta de ${titulo}`}>
         Ver receta <span aria-hidden="true">→</span>
       </Link>
+      {favoriteAction}
     </li>
   )
 }

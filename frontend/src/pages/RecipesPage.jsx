@@ -1,6 +1,8 @@
 import { useCallback, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import RecipeCard from '../components/RecipeCard.jsx'
+import FavoriteButton from '../components/FavoriteButton.jsx'
+import FavoritesStatus from '../components/FavoritesStatus.jsx'
 import RequestError from '../components/RequestError.jsx'
 import { usePublicRequest } from '../hooks/usePublicRequest.js'
 import { getCategories, getRecipes, readCatalogFilters, recipeTypes } from '../services/recipesService.js'
@@ -129,6 +131,7 @@ export default function RecipesPage() {
         {recipes.data && `${totalElementos} ${totalElementos === 1 ? 'resultado' : 'resultados'}`}
       </p>
       {recipes.error && <RequestError error={recipes.error} onRetry={recipes.retry} retryLabel="Reintentar recetas" />}
+      <FavoritesStatus />
       {outsideCatalog ? (
         <div className="catalog-empty">
           <h3>Esta página no está disponible</h3>
@@ -137,7 +140,8 @@ export default function RecipesPage() {
       ) : contenido?.length ? (
         <>
           <ul className="catalog-grid" role="list">
-            {contenido.map((recipe) => <RecipeCard key={recipe.id} recipe={recipe} />)}
+            {contenido.map((recipe) => <RecipeCard key={recipe.id} recipe={recipe}
+              favoriteAction={<FavoriteButton recipe={recipe} />} />)}
           </ul>
           {totalPaginas > 1 && <CatalogPagination page={page} pageCount={totalPaginas} onPageChange={changePage} />}
         </>

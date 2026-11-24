@@ -63,7 +63,7 @@ que la sesión no es válida. Un 403 es falta de autorización, no un 401.
 | `/autores` | Directorio de perfiles ficticios, marcados como ejemplos. |
 | `/autores/ejemplo` y `/autores/ejemplo-2` | Perfil público de demostración, aviso sobre las recetas asociadas y enlace al catálogo. |
 | `/autores/no-existe` | «Autor no encontrado» y enlace al directorio. |
-| `/favoritos` | Estado de visitante, enlaces a login y al catálogo, sin favoritos simulados. |
+| `/favoritos` | Favoritos personales de la API; carga, vacío, reintento y eliminación. Para visitantes, enlace a login con retorno y al catálogo. |
 | `/login` | Acceso con correo y contraseña, mostrar u ocultar contraseña y enlaces a alta y recuperación. |
 | `/registro` | Alta con nombre visible, correo, contraseña y confirmación. |
 | `/recuperar-contrasena` | Aviso de función no disponible y enlace de regreso al login; no se envía correo. |
@@ -308,8 +308,9 @@ pantalla de Tradiciones del prototipo no se pudo verificar en Figma.
   desconocido. Los autores ficticios viven en `src/data/demoAuthors.js`;
   no están relacionados con las recetas ni los autores de la API.
 - Desde cada autor y desde **Favoritos** puedes abrir el catálogo público.
-  **Favoritos** no muestra ni guarda recetas personales. Estas vistas no crean
-  sesiones, no hacen peticiones a la API y no guardan datos en el navegador.
+  Con sesión iniciada, marca una receta desde **Catálogo** o **Detalle**,
+  comprueba que aparece en **Favoritos** y quítala desde allí. Al regresar al
+  catálogo, el control debe ofrecer agregarla de nuevo.
 - Recarga las rutas nuevas directamente. A **320, 390, 768 y 1440 px**, revisa
   que no haya desplazamiento horizontal, que el directorio se reorganice y
   que todos los enlaces tengan foco visible al recorrerlos con Tab.
@@ -318,7 +319,7 @@ pantalla de Tradiciones del prototipo no se pudo verificar en Figma.
 «13 · Cocinero · Favoritos y compras» y «14 · Cocinero · Mi perfil». El perfil
 público conserva la cabecera con iniciales y texto, sin métricas ni recetas
 atribuidas. Las vistas personales usan el layout público en lugar del panel
-de cocinero: no muestran ajustes de cuenta, favoritos guardados ni una lista
+de cocinero: no muestran ajustes de cuenta ni una lista
 de compras. El directorio de autores es una vista nueva.
 
 **Verificado:** enlaces de las nuevas vistas, recarga directa, foco visible
@@ -326,12 +327,26 @@ por teclado y ausencia de desplazamiento horizontal a 320, 390, 768 y 1440 px.
 También se comprobó que Inicio, Catálogo, Detalle, Tradiciones y las tres rutas
 de autenticación siguen abriendo.
 
-Para la integración con Aleks quedan la edición del perfil propio, los perfiles
-públicos y su relación con recetas reales y la gestión de favoritos.
-El servidor asigna `USUARIO` a cuentas nuevas y deberá verificar permisos,
-cuenta activa y propiedad en las futuras operaciones.
-Solo se mostrarán como favoritas las recetas visibles según el servidor:
-publicadas, no eliminadas y de autores activos.
+#### Integración de favoritos
+
+`favoritesService.js` usa `apiRequest` vía la sesión autenticada para
+`GET /api/v1/favoritos` y `POST`/`DELETE /api/v1/favoritos/{recetaId}`; las
+mutaciones esperan `204` sin JSON. Catálogo, detalle y favoritos comparten el
+estado en memoria de la sesión y revalidan la lista al entrar en esas rutas.
+El control evita duplicados mientras se guarda y solo cambia tras el éxito.
+Un `401` limpia la sesión local y pide iniciar sesión; un `403` muestra un
+problema de autorización sin cerrar la sesión.
+
+El JWT no se almacena en el navegador: **al recargar hay que volver a iniciar
+sesión**. Los favoritos persisten en MySQL y reaparecen tras iniciar sesión de
+nuevo. Solo se muestran recetas visibles según el servidor (publicadas, no
+eliminadas y de autores activos). Si una deja de ser visible, la asociación
+se conserva pero no se ofrece desde la lista.
+
+Contrato: [FAVORITOS_API.md](../backend/docs/FAVORITOS_API.md).
+`npm test` cubre la integración con `fetch` simulado además de las pruebas
+existentes del catálogo, la calculadora y autenticación. La edición del perfil y
+la integración de perfiles de autores quedan fuera de este módulo.
 
 ### Formularios de autenticación
 

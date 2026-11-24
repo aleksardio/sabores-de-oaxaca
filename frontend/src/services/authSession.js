@@ -1,4 +1,4 @@
-import { ApiError } from './apiClient.js'
+import { ApiError, apiRequest } from './apiClient.js'
 import * as authService from './authService.js'
 
 const emptySession = { user: null, logoutPending: false, logoutError: '', notice: '' }
@@ -84,6 +84,20 @@ export function createAuthSession() {
     }
   }
 
+  async function requestAuthenticated(user, path, options) {
+    if (!token || snapshot.user !== user) throw new ApiError(401, expired)
+    try {
+      return await apiRequest(path, { ...options, token })
+    } catch (error) {
+      // Un 401 tardío de una sesión anterior no debe cerrar la sesión actual.
+      if (error instanceof ApiError && error.status === 401 && snapshot.user === user) {
+        const notice = pendingLogout ? `${error.message} ${unconfirmed}` : error.message
+        clear(notice)
+      }
+      throw error
+    }
+  }
+
   return {
     getSnapshot: () => snapshot,
     subscribe(listener) {
@@ -92,6 +106,7 @@ export function createAuthSession() {
     },
     signIn,
     signOut,
+    requestAuthenticated,
     leaveLocally() {
       if (!snapshot.logoutError) return false
       clear(`Saliste de este navegador. ${unconfirmed}`)

@@ -49,6 +49,9 @@ class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/auth/me").authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/v1/auth/logout").authenticated()
+                .requestMatchers(HttpMethod.GET, "/api/v1/favoritos").authenticated()
+                .requestMatchers(HttpMethod.POST, "/api/v1/favoritos/{recetaId}").authenticated()
+                .requestMatchers(HttpMethod.DELETE, "/api/v1/favoritos/{recetaId}").authenticated()
                 .anyRequest().denyAll())
                 .exceptionHandling(errors -> errors
                         .authenticationEntryPoint((request, response, error) -> {
@@ -95,12 +98,17 @@ class SecurityConfig {
         config.setAllowedHeaders(List.of("Content-Type", "Authorization"));
         config.setAllowCredentials(false);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        CorsConfiguration favoritos = new CorsConfiguration(config);
+        favoritos.setAllowedMethods(List.of("POST", "DELETE"));
+        source.registerCorsConfiguration("/api/v1/favoritos/{recetaId}", favoritos);
+
         CorsConfiguration privadas = new CorsConfiguration(config);
         privadas.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE"));
         privadas.setAllowedHeaders(List.of("Content-Type", "Authorization", "If-Match"));
         source.registerCorsConfiguration("/api/v1/mis-recetas/*", privadas);
         source.registerCorsConfiguration("/api/v1/mis-recetas/*/enviar-revision", privadas);
         source.registerCorsConfiguration("/api/v1/moderacion/recetas/**", privadas);
+
         source.registerCorsConfiguration("/api/v1/**", config);
         return source;
     }
