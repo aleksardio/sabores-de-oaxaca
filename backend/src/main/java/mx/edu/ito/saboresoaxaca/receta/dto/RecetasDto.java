@@ -7,6 +7,7 @@ public final class RecetasDto {
     private RecetasDto() { }
     public record Autor(Long id, String nombreVisible, String avatarUrl) { }
     public record Categoria(Long id, String nombre, String descripcion) { }
+    public record IngredienteCatalogo(Long id, String nombre) { }
     public record Ingrediente(Long id, String nombre, BigDecimal cantidadBase, BigDecimal cantidadAjustada, String unidad, Integer orden, String nota) { }
     public record Multimedia(Long id, String tipo, String url, String textoAlternativo, Integer orden) { }
     public record Resumen(Long id, String titulo, String descripcion, String tipo, Integer porcionesBase, Autor autor, List<Categoria> categorias) { }

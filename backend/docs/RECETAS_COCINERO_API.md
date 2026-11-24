@@ -4,7 +4,7 @@ Base: `/api/v1`. Enviar `Authorization: Bearer <JWT>`. La identidad y los roles 
 
 ## POST /mis-recetas
 
-Requiere `COCINERO`. El servidor asigna el autor autenticado y el estado `BORRADOR`. Campos desconocidos, incluidos `autor_id` y `estado`, se rechazan. Categorías e ingredientes deben existir previamente; sus identificadores son datos del catálogo disponible en el entorno. No se implementa un endpoint nuevo de ingredientes.
+Requiere `COCINERO`. El servidor asigna el autor autenticado y el estado `BORRADOR`. Campos desconocidos, incluidos `autor_id` y `estado`, se rechazan. Categorías e ingredientes deben existir previamente; sus identificadores se consultan en `GET /api/v1/categorias` y `GET /api/v1/ingredientes`.
 
 ```json
 {
@@ -51,7 +51,7 @@ Requiere `COCINERO` y ser propietario. Enviar la versión obtenida del GET en la
 
 ## POST /mis-recetas/{id}/enviar-revision
 
-Requiere `COCINERO`, propiedad y la cabecera `If-Match: "0"` con la versión vigente; no requiere cuerpo. Solo admite una receta `BORRADOR` no eliminada y completa: título, descripción y preparación no vacíos, porciones positivas, al menos un ingrediente y una categoría. Cambia el estado a `PENDIENTE`, incrementa la versión y responde `200`, por ejemplo `{"id":1,"estado":"PENDIENTE","version":1}`. No publica la receta; no se permite reenviar una receta pendiente ni enviar una rechazada directamente.
+Requiere `COCINERO`, propiedad y la cabecera `If-Match: "0"` con la versión vigente; no requiere cuerpo. Admite una receta `BORRADOR` o `RECHAZADA` no eliminada y completa: título, descripción y preparación no vacíos, porciones positivas, al menos un ingrediente y una categoría. Una receta rechazada puede corregirse con PUT antes de reenviarla. Cambia el estado a `PENDIENTE`, incrementa la versión y responde `200`, por ejemplo `{"id":1,"estado":"PENDIENTE","version":1}`. No publica la receta; no se permite enviar una receta pendiente, publicada o archivada.
 
 Para ambos endpoints: `400` si falta `If-Match` o no contiene exactamente un entero no negativo entre comillas, dentro del rango de `Long`; `401` sin JWT válido; `403` sin `COCINERO`; `404` si la receta no existe o es ajena; `409` por versión obsoleta, estado incompatible, baja repetida o receta incompleta. La versión del encabezado no admite listas, comodín ni etiquetas débiles. La versión y la operación se comprueban en una transacción con bloqueo optimista; una operación concurrente puede producir `409`.
 

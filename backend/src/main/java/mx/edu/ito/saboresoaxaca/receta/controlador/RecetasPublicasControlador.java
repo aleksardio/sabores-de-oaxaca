@@ -16,4 +16,6 @@ public class RecetasPublicasControlador {
     public RecetasDto.Detalle detalle(@PathVariable Long id, @RequestParam(required = false) Integer porciones) { return servicio.detalle(id, porciones); }
     @GetMapping("/categorias")
     public List<RecetasDto.Categoria> categorias() { return servicio.categorias(); }
+    @GetMapping("/ingredientes")
+    public List<RecetasDto.IngredienteCatalogo> ingredientes() { return servicio.ingredientes(); }
 }

@@ -20,8 +20,9 @@ public class RecetasPublicasServicio {
     private final RecetaCategoriaRepositorio relacionesCategorias;
     private final RecetaIngredienteRepositorio ingredientes;
     private final RecetaMultimediaRepositorio multimedia;
-    public RecetasPublicasServicio(RecetaRepositorio recetas, CategoriaRepositorio categorias, RecetaCategoriaRepositorio relacionesCategorias, RecetaIngredienteRepositorio ingredientes, RecetaMultimediaRepositorio multimedia) {
-        this.recetas = recetas; this.categorias = categorias; this.relacionesCategorias = relacionesCategorias; this.ingredientes = ingredientes; this.multimedia = multimedia;
+    private final IngredienteRepositorio catalogoIngredientes;
+    public RecetasPublicasServicio(RecetaRepositorio recetas, CategoriaRepositorio categorias, RecetaCategoriaRepositorio relacionesCategorias, RecetaIngredienteRepositorio ingredientes, RecetaMultimediaRepositorio multimedia, IngredienteRepositorio catalogoIngredientes) {
+        this.recetas = recetas; this.categorias = categorias; this.relacionesCategorias = relacionesCategorias; this.ingredientes = ingredientes; this.multimedia = multimedia; this.catalogoIngredientes = catalogoIngredientes;
     }
     public RecetasDto.Pagina catalogo(String titulo, Long categoria, String tipo, int pagina, int tamano) {
         if (pagina < 0 || tamano < 1 || tamano > 50 || (long) pagina * tamano > Integer.MAX_VALUE || (categoria != null && categoria < 1) || (tipo != null && !List.of("COMUN", "TRADICIONAL_OAXAQUENA").contains(tipo)) || (titulo != null && (titulo.isBlank() || titulo.length() > 200))) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Filtros inválidos");
@@ -41,6 +42,7 @@ public class RecetasPublicasServicio {
         return new RecetasDto.Detalle(r.getId(), r.getTitulo(), r.getDescripcion(), r.getPreparacion(), r.getTipo(), r.getPorcionesBase(), porciones, autor(r), cats, ings, medios);
     }
     public List<RecetasDto.Categoria> categorias() { return categorias.findAllByOrderByNombreAscIdAsc().stream().map(RecetasPublicasServicio::categoria).toList(); }
+    public List<RecetasDto.IngredienteCatalogo> ingredientes() { return catalogoIngredientes.findAllByOrderByNombreAscIdAsc().stream().map(i -> new RecetasDto.IngredienteCatalogo(i.getId(), i.getNombre())).toList(); }
     private static RecetasDto.Categoria categoria(mx.edu.ito.saboresoaxaca.receta.entidad.Categoria c) { return new RecetasDto.Categoria(c.getId(), c.getNombre(), c.getDescripcion()); }
     private static RecetasDto.Autor autor(Receta r) { var a = r.getAutor(); return new RecetasDto.Autor(a.getId(), a.getNombreVisible(), a.getAvatarUrl()); }
 }

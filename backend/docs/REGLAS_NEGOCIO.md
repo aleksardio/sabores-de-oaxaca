@@ -18,6 +18,7 @@ Al crear, una receta comienza en `BORRADOR`. Envío y publicación exigen títul
 | Origen | Destino | Quién y condición |
 |---|---|---|
 | BORRADOR | PENDIENTE | COCINERO propietario envía contenido completo |
+| RECHAZADA | PENDIENTE | COCINERO propietario reenvía contenido completo, tras corregirlo si corresponde |
 | PUBLICADA | BORRADOR | COCINERO propietario retira su receta para editar; deja de ser pública inmediatamente |
 | RECHAZADA | BORRADOR | COCINERO propietario reabre y corrige |
 | PENDIENTE | PUBLICADA | MODERADOR o ADMIN distinto del autor aprueba; fija `publicado_en` en primera publicación |
