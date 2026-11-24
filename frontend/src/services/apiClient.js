@@ -21,7 +21,8 @@ export class ApiError extends Error {
 
 export async function apiRequest(path, { method = 'GET', body, token, signal, errors, expected = 200, ifMatch } = {}) {
   const headers = { Accept: 'application/json' }
-  if (body !== undefined) headers['Content-Type'] = 'application/json'
+  const multipart = typeof FormData !== 'undefined' && body instanceof FormData
+  if (body !== undefined && !multipart) headers['Content-Type'] = 'application/json'
   if (token) headers.Authorization = `Bearer ${token}`
   if (ifMatch !== undefined) headers['If-Match'] = ifMatch
 
@@ -31,7 +32,7 @@ export async function apiRequest(path, { method = 'GET', body, token, signal, er
       method,
       headers,
       signal,
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: body === undefined || multipart ? body : JSON.stringify(body),
       credentials: 'omit',
       redirect: 'error',
       cache: 'no-store',
@@ -41,6 +42,7 @@ export async function apiRequest(path, { method = 'GET', body, token, signal, er
     throw new ApiError(0, 'No pudimos conectar con el servidor. Comprueba tu conexión.')
   }
 
+  if (multipart) signal?.throwIfAborted()
   if (response.ok && response.status !== expected) {
     throw new ApiError(response.status, 'El servidor devolvió una respuesta inesperada.')
   }
@@ -55,6 +57,7 @@ export async function apiRequest(path, { method = 'GET', body, token, signal, er
       if (response.ok) throw new ApiError(response.status, 'El servidor devolvió una respuesta inesperada.')
     }
   }
+  if (multipart) signal?.throwIfAborted()
   if (response.ok) return data
 
   const fields = {}

@@ -9,6 +9,7 @@ import ServingsCalculator from '../components/ServingsCalculator.jsx'
 import { usePublicRequest } from '../hooks/usePublicRequest.js'
 import { getRecipeById, parseRecipeId, recipeTypes } from '../services/recipesService.js'
 import { recipeImage } from '../utils/publicRecipePresentation.js'
+import { isHttpsMediaUrl } from '../utils/recipeEditorValidation.js'
 import '../styles/recipe-detail.css'
 
 function RecipeIngredients({ recipe }) {
@@ -48,6 +49,8 @@ export default function RecipeDetailPage() {
 
   const type = recipeTypes.find(({ value }) => value === recipe.tipo)?.name
   const image = recipeImage(recipe.multimedia)
+  const videos = recipe.multimedia.filter(({ tipo, url }) => tipo === 'VIDEO' && isHttpsMediaUrl(url))
+    .sort((a, b) => a.orden - b.orden)
 
   return (
     <article className="recipe-detail" aria-labelledby="recipe-detail-title">
@@ -75,6 +78,18 @@ export default function RecipeDetailPage() {
         <RecipeIngredients key={recipe.id} recipe={recipe} />
         <RecipePreparation preparation={recipe.preparacion} />
       </div>
+      {videos.length > 0 && (
+        <section className="detail-panel" aria-labelledby="recipe-video-title">
+          <h2 id="recipe-video-title">Videos</h2>
+          <ul>
+            {videos.map(({ id: mediaId, url, textoAlternativo }) => (
+              <li key={mediaId}><a href={url} target="_blank" rel="noopener noreferrer">
+                {textoAlternativo?.trim() || 'Ver video'} (abre en otra pestaña)
+              </a></li>
+            ))}
+          </ul>
+        </section>
+      )}
     </article>
   )
 }

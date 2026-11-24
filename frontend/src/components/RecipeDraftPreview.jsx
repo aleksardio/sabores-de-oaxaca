@@ -1,7 +1,7 @@
 import { ingredientUnits, mediaTypes, recipeTypes } from '../data/recipeEditorOptions.js'
-import { isHttpsMediaUrl } from '../utils/recipeEditorValidation.js'
-import { DishIllustration } from './RecipeCard.jsx'
+import { recipeImage } from '../utils/publicRecipePresentation.js'
 import RecipeImage from './RecipeImage.jsx'
+import RecipeMedia from './RecipeMedia.jsx'
 import RecipePreparation from './RecipePreparation.jsx'
 import '../styles/recipe-detail.css'
 
@@ -9,12 +9,14 @@ export default function RecipeDraftPreview({ recipe, heading, prefix = 'cook-pre
   const byOrder = (a, b) => Number(a.order) - Number(b.order)
   const ingredients = recipe.ingredients.filter(({ name, ingredientId, quantity, note }) =>
     showReferences || name.trim() || ingredientId || quantity || note.trim()).sort(byOrder)
+  const media = (recipe.multimedia ?? []).slice().sort(byOrder)
+  const cover = image === undefined ? recipeImage(media.filter((row) => !row.local).map((row) => ({
+    tipo: row.type, url: row.url, orden: Number(row.order), textoAlternativo: row.alt,
+  }))) : image
 
   return (
     <article className="recipe-detail cook-preview" aria-labelledby={`${prefix}-recipe`}>
-      {image === undefined
-        ? <DishIllustration label="Ilustración de la receta" variant="detail" />
-        : <RecipeImage key={image?.src} image={image} title={recipe.title} />}
+      <RecipeImage key={cover?.src} image={cover} title={recipe.title || 'Ilustración de la receta'} />
       <ul className="cook-preview-meta" role="list" aria-label="Datos de la receta">
         <li className="detail-badge">{recipeTypes[recipe.type] || 'Sin tipo'}</li>
         <li className="detail-badge">Porciones: {recipe.baseServings.trim() || 'sin indicar'}</li>
@@ -47,16 +49,15 @@ export default function RecipeDraftPreview({ recipe, heading, prefix = 'cook-pre
         </section>
         <RecipePreparation preparation={recipe.preparation} titleId={`${prefix}-preparation`} />
       </div>
-      {recipe.multimedia?.length > 0 && (
+      {media.length > 0 && (
         <section className="detail-panel" aria-labelledby={`${prefix}-media`}>
           <h2 id={`${prefix}-media`}>Referencias multimedia</h2>
-          <ul>
-            {recipe.multimedia.slice().sort(byOrder).map(({ id, url, type, alt, order }) => (
-              <li key={id}>
-                {mediaTypes[type] || 'Sin tipo'} (orden {order || '—'}):{' '}
-                {isHttpsMediaUrl(url) && !showReferences
-                  ? <a href={url} target="_blank" rel="noreferrer">{alt || url} (abre en otra pestaña)</a>
-                  : <span>{url || 'Sin URL'}{alt && ` · ${alt}`}</span>}
+          <ul className="cook-media-list">
+            {media.map((row) => (
+              <li key={row.id}>
+                <strong>{mediaTypes[row.type] || 'Sin tipo'} (orden {row.order || '—'})</strong>
+                <RecipeMedia row={row} title={recipe.title} showImage={row.url !== cover?.src || Boolean(row.local)} />
+                {showReferences && row.url && row.alt && <p className="cook-muted">{row.url}</p>}
               </li>
             ))}
           </ul>

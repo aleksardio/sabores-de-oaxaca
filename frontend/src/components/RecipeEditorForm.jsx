@@ -1,16 +1,19 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import RequestError from './RequestError.jsx'
+import RecipeMedia from './RecipeMedia.jsx'
 import { ingredientUnits, mediaTypes, recipeTypes } from '../data/recipeEditorOptions.js'
 import { getIngredientChoices, searchIngredients, selectIngredient } from '../utils/ingredientSelection.js'
-import { changeIngredientUnit, maxItems, positiveInteger } from '../utils/recipeEditorValidation.js'
+import { changeIngredientUnit, hasPendingMedia, maxItems, nextOrder, pendingMediaMessage } from '../utils/recipeEditorValidation.js'
+import { mediaAccept } from '../utils/multimediaFiles.js'
 
 const ingredientSearchId = 'recipe-ingredient-search'
+const mediaPrivacyId = 'recipe-media-privacy'
 
-function Field({ id, label, error, options, emptyOption, multiline, hint, children, ...props }) {
+function Field({ id, label, error, options, emptyOption, multiline, hint, children, describedBy, ...props }) {
   const attributes = {
     ...props, id,
     'aria-invalid': error ? true : undefined,
-    'aria-describedby': [hint && `${id}-hint`, error && `${id}-error`].filter(Boolean).join(' ') || undefined,
+    'aria-describedby': [describedBy, hint && `${id}-hint`, error && `${id}-error`].filter(Boolean).join(' ') || undefined,
   }
   return (
     <div className="cook-field">
@@ -27,17 +30,9 @@ function Field({ id, label, error, options, emptyOption, multiline, hint, childr
   )
 }
 
-function nextOrder(rows) {
-  const used = new Set(rows.map(({ order }) => Number(order)))
-  let order = 1
-  while (used.has(order)) order++
-  // Append after existing rows where possible; gaps are fine.
-  const last = Math.max(0, ...rows.filter((row) => positiveInteger(row.order, 2147483647)).map((row) => Number(row.order)))
-  return String(last < 2147483647 ? last + 1 : order)
-}
-
 export default function RecipeEditorForm({
   draft, onChange, errors, pending, blocked, onSave, onReview, reviewLabel, creating, categories, ingredients,
+  mediaError, onSelectMedia, onUploadMedia, onCancelMedia, onRemoveMedia,
 }) {
   const [ingredientQuery, setIngredientQuery] = useState('')
   const formRef = useRef(null)
@@ -103,6 +98,14 @@ export default function RecipeEditorForm({
       : showIngredientSearch ? `#${ingredientSearchId}` : '#cook-ingredients-title'
     removeRow('ingredients', rowId, focus)
   }
+
+  function selectFile(event, row) {
+    const file = event.currentTarget.files?.[0]
+    event.currentTarget.value = ''
+    if (file) onSelectMedia(file, row)
+  }
+
+  const unresolvedMedia = hasPendingMedia(draft)
 
   return (
     <form className="cook-editor" ref={formRef} onSubmit={(event) => { event.preventDefault(); onSave() }} noValidate>
@@ -192,38 +195,64 @@ export default function RecipeEditorForm({
             <Field {...bind('preparation')} label="Instrucciones" hint="Escribe un paso por línea." multiline rows={5} required />
           </section>
         </div>
-        <section className="cook-panel" aria-labelledby="cook-media-title">
-          <h2 id="cook-media-title">Multimedia</h2>
-          <p className="cook-muted">Agrega enlaces HTTPS a imágenes o videos. No se suben archivos.</p>
-          {draft.multimedia.map((row, index) => {
-            const field = (key) => bindRow('multimedia', 'media', row, key)
-            return (
-              <fieldset className="cook-ingredient-row" key={row.id}>
-                <legend>Referencia {index + 1}</legend>
-                <div className="cook-two-fields">
-                  <Field {...field('type')} label="Tipo de multimedia" options={mediaTypes} required />
-                  <Field {...field('order')} label="Orden" inputMode="numeric" required />
-                </div>
-                <Field {...field('url')} label="URL HTTPS" type="url" maxLength={2048} required />
-                <Field {...field('alt')} label="Texto alternativo (opcional)" maxLength={255} />
-                <button type="button" className="site-button" onClick={() => removeRow('multimedia', row.id, '#recipe-add-media')}
-                  aria-label={`Quitar referencia ${index + 1}`}>Quitar</button>
-              </fieldset>
-            )
-          })}
-          <button id="recipe-add-media" className="site-button" type="button" disabled={draft.multimedia.length >= maxItems.multimedia}
-            onClick={() => addRow('multimedia', 'media', 'url', { type: 'IMAGEN', url: '', alt: '' })}>+ Agregar referencia</button>
-          {errors.multimedia && <p className="cook-error" role="alert" tabIndex={-1}>{errors.multimedia}</p>}
-        </section>
-        <div className="cook-panel cook-form-footer">
-          {creating && <p className="cook-muted">Guarda el borrador para poder enviarlo a revisión desde su editor.</p>}
-          <div className="cook-actions">
-            <button className="site-button cook-primary" type="submit" disabled={blocked}>{creating ? 'Guardar borrador' : 'Guardar cambios'}</button>
-            {onReview && <button className="site-button" type="button" disabled={blocked} onClick={onReview}>{reviewLabel}</button>}
-          </div>
-          {Object.keys(errors).length > 0 && <p className="cook-error" role="status">Revisa los campos indicados.</p>}
-        </div>
       </fieldset>
+      <section className="cook-panel" aria-labelledby="cook-media-title">
+        <h2 id="cook-media-title">Multimedia</h2>
+        <p id={mediaPrivacyId} className="cook-demo-notice">
+          Los archivos subidos serán públicos aunque la receta todavía sea un borrador. No subas información privada ni fotografías o videos sin autorización.
+        </p>
+        <Field id="recipe-add-media" label="Seleccionar foto o video" type="file" accept={mediaAccept}
+          describedBy={mediaPrivacyId}
+          hint={`JPEG, PNG o WebP (hasta 5 MiB); MP4 o WebM (hasta 30 MiB). Hasta ${maxItems.multimedia} referencias.`}
+          disabled={pending || blocked || draft.multimedia.length >= maxItems.multimedia}
+          onChange={selectFile} />
+        {mediaError && <p className="cook-error" role="alert">{mediaError}</p>}
+        {draft.multimedia.map((row, index) => {
+          const field = (key) => bindRow('multimedia', 'media', row, key)
+          const uploading = row.local?.status === 'uploading'
+          const locked = pending || blocked
+          return (
+            <fieldset className="cook-ingredient-row" key={row.id}>
+              <legend>Referencia {index + 1}: {mediaTypes[row.type]}</legend>
+              <RecipeMedia row={row} title={draft.title} />
+              {(errors[`media-${row.id}-url`] || errors[`media-${row.id}-type`]) &&
+                <p className="cook-error" role="alert" tabIndex={-1}>
+                  {errors[`media-${row.id}-url`] || errors[`media-${row.id}-type`]}
+                </p>}
+              <div className="cook-two-fields">
+                <Field {...field('order')} label="Orden" inputMode="numeric" required disabled={locked} />
+                <Field {...field('alt')} label="Texto alternativo (opcional)" maxLength={255} disabled={locked} />
+              </div>
+              {row.local && !uploading && <Field id={`media-${row.id}-replacement`} label="Cambiar archivo" type="file"
+                accept={mediaAccept} describedBy={mediaPrivacyId} disabled={locked} onChange={(event) => selectFile(event, row)} />}
+              <div className="cook-actions">
+                {row.local && (uploading
+                  ? <button type="button" className="site-button" onClick={() => onCancelMedia(row)}>Cancelar subida</button>
+                    : <button type="button" className="site-button cook-primary" aria-describedby={mediaPrivacyId}
+                      disabled={locked} onClick={() => onUploadMedia(row)}>
+                    {row.local.status === 'ready' ? 'Subir archivo' : 'Reintentar subida'}
+                  </button>)}
+                <button type="button" className="site-button" disabled={blocked || (pending && !uploading)}
+                  onClick={() => {
+                    focusTarget.current = '#recipe-add-media'
+                    onRemoveMedia(row)
+                  }} aria-label={`Quitar referencia ${index + 1}`}>Quitar referencia</button>
+              </div>
+            </fieldset>
+          )
+        })}
+        {errors.multimedia && errors.multimedia !== pendingMediaMessage &&
+          <p className="cook-error" role="alert" tabIndex={-1}>{errors.multimedia}</p>}
+      </section>
+      <div className="cook-panel cook-form-footer">
+        {creating && <p className="cook-muted">Guarda el borrador para poder enviarlo a revisión desde su editor.</p>}
+        {unresolvedMedia && <p className="cook-muted" role="status">{pendingMediaMessage}</p>}
+        <div className="cook-actions">
+          <button className="site-button cook-primary" type="submit" disabled={blocked || pending || unresolvedMedia}>{creating ? 'Guardar borrador' : 'Guardar cambios'}</button>
+          {onReview && <button className="site-button" type="button" disabled={blocked || pending || unresolvedMedia} onClick={onReview}>{reviewLabel}</button>}
+        </div>
+        {Object.keys(errors).length > 0 && <p className="cook-error" role="status">Revisa los campos indicados.</p>}
+      </div>
     </form>
   )
 }
