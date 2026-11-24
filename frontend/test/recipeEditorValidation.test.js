@@ -15,7 +15,7 @@ test('guarda borrador con arreglos vacíos pero exige categoría, ingrediente y 
   assert.deepEqual(Object.keys(validateRecipeForReview(draft, record)).sort(), ['categories', 'ingredients'])
   const complete = { ...draft, categories: [{ id: 14 }], ingredients: [ingredient] }
   assert.deepEqual(validateRecipeForReview(complete, record), {})
-  assert.ok(validateRecipeForReview(complete, { ...record, estado: 'RECHAZADA' }).state)
+  assert.deepEqual(validateRecipeForReview(complete, { ...record, estado: 'RECHAZADA' }), {})
   assert.ok(validateRecipeForReview(complete, { ...record, eliminadoEn: '2026-11-23' }).state)
   for (const key of ['categories', 'ingredients', 'multimedia']) assert.ok(check({ [key]: undefined })[key])
 })

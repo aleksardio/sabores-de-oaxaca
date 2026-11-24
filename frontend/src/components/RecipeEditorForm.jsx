@@ -1,9 +1,12 @@
-import { useLayoutEffect, useRef } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import RequestError from './RequestError.jsx'
 import { ingredientUnits, mediaTypes, recipeTypes } from '../data/recipeEditorOptions.js'
+import { getIngredientChoices, searchIngredients, selectIngredient } from '../utils/ingredientSelection.js'
 import { changeIngredientUnit, maxItems, positiveInteger } from '../utils/recipeEditorValidation.js'
 
-function Field({ id, label, error, options, emptyOption, multiline, hint, ...props }) {
+const ingredientSearchId = 'recipe-ingredient-search'
+
+function Field({ id, label, error, options, emptyOption, multiline, hint, children, ...props }) {
   const attributes = {
     ...props, id,
     'aria-invalid': error ? true : undefined,
@@ -12,21 +15,16 @@ function Field({ id, label, error, options, emptyOption, multiline, hint, ...pro
   return (
     <div className="cook-field">
       <label htmlFor={id}>{label}</label>
-      {options ? (
+      {options || children ? (
         <select {...attributes}>
           {emptyOption && <option value="">{emptyOption}</option>}
-          {Object.entries(options).map(([value, text]) => <option key={value} value={value}>{text}</option>)}
+          {children ?? Object.entries(options).map(([value, text]) => <option key={value} value={value}>{text}</option>)}
         </select>
       ) : multiline ? <textarea {...attributes} /> : <input {...attributes} />}
       {hint && <small id={`${id}-hint`} className="cook-muted">{hint}</small>}
       {error && <span id={`${id}-error`} className="cook-error">{error}</span>}
     </div>
   )
-}
-
-// A future catalogue selector only needs to set ingredientId and its display name.
-function IngredientReferenceField({ binding, name }) {
-  return <Field {...binding} label="ID del ingrediente" inputMode="numeric" hint={name || undefined} required />
 }
 
 function nextOrder(rows) {
@@ -39,8 +37,9 @@ function nextOrder(rows) {
 }
 
 export default function RecipeEditorForm({
-  draft, onChange, errors, pending, blocked, onSave, onReview, creating, categories,
+  draft, onChange, errors, pending, blocked, onSave, onReview, reviewLabel, creating, categories, ingredients,
 }) {
+  const [ingredientQuery, setIngredientQuery] = useState('')
   const formRef = useRef(null)
   const nextId = useRef(0)
   const focusTarget = useRef(null)
@@ -51,7 +50,7 @@ export default function RecipeEditorForm({
     }
   })
   useLayoutEffect(() => {
-    if (Object.keys(errors).length) formRef.current?.querySelector('[aria-invalid="true"]:not(:disabled), [role="alert"]')?.focus()
+    if (Object.keys(errors).length) formRef.current?.querySelector('[aria-invalid="true"]:not(:disabled), [role="alert"][tabindex]')?.focus()
   }, [errors])
 
   function bind(field) {
@@ -70,7 +69,6 @@ export default function RecipeEditorForm({
         onChange((recipe) => ({ ...recipe, [collection]: recipe[collection].map((item) => {
           if (item.id !== row.id) return item
           if (field === 'unit') return changeIngredientUnit(item, value)
-          if (field === 'ingredientId') return { ...item, ingredientId: value, name: Number(value) === Number(item.ingredientId) ? item.name : '' }
           return { ...item, [field]: value }
         }) }))
       },
@@ -92,6 +90,18 @@ export default function RecipeEditorForm({
   const catalog = new Map((categories.data ?? []).map((category) => [category.id, category]))
   for (const category of draft.categories) {
     if (!catalog.has(category.id)) catalog.set(category.id, category)
+  }
+  const ingredientCatalog = ingredients.data
+  const showIngredientSearch = Boolean(ingredientCatalog?.length)
+  const matches = searchIngredients(ingredientCatalog ?? [], ingredientQuery)
+  const canAddIngredient = (rows) => rows.length < maxItems.ingredients
+    && getIngredientChoices(ingredientCatalog, rows, null, matches).some(({ disabled }) => !disabled)
+
+  function removeIngredient(rowId) {
+    const remaining = draft.ingredients.filter(({ id }) => id !== rowId)
+    const focus = canAddIngredient(remaining) ? '#recipe-add-ingredient'
+      : showIngredientSearch ? `#${ingredientSearchId}` : '#cook-ingredients-title'
+    removeRow('ingredients', rowId, focus)
   }
 
   return (
@@ -127,26 +137,54 @@ export default function RecipeEditorForm({
             </fieldset>
           </section>
           <section className="cook-panel" aria-labelledby="cook-ingredients-title">
-            <h2 id="cook-ingredients-title">Ingredientes con cantidades</h2>
-            <p className="cook-muted">Aún no hay un catálogo de ingredientes en la API. Introduce un ID existente proporcionado por Aleks; el servidor comprueba que exista.</p>
+            <h2 id="cook-ingredients-title" tabIndex={-1}>Ingredientes con cantidades</h2>
+            <p className="cook-muted">Puedes guardar un borrador sin ingredientes. Para revisión, agrega al menos uno.</p>
+            {ingredients.loading && <p role="status">Cargando ingredientes…</p>}
+            {ingredients.error && <RequestError error={ingredients.error} onRetry={ingredients.retry} retryLabel="Reintentar consulta de ingredientes" />}
+            {ingredients.data?.length === 0 && <p role="status">No hay ingredientes disponibles en el catálogo.</p>}
+            {showIngredientSearch && (
+              <>
+                <Field id={ingredientSearchId} label="Buscar ingrediente por nombre" type="search"
+                  hint="Filtra las opciones de todas las filas sin cambiar los ingredientes seleccionados."
+                  value={ingredientQuery} onChange={(event) => setIngredientQuery(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' && !event.nativeEvent.isComposing) event.preventDefault()
+                  }} />
+                <div role="status" className="cook-muted">
+                  {matches.length === 0 && 'No hay ingredientes que coincidan con la búsqueda.'}
+                </div>
+              </>
+            )}
             {draft.ingredients.map((row, index) => {
               const field = (key) => bindRow('ingredients', 'ingredient', row, key)
+              const choices = getIngredientChoices(ingredientCatalog, draft.ingredients, row, matches)
+              const id = `ingredient-${row.id}-ingredientId`
               return (
                 <fieldset className="cook-ingredient-row" key={row.id}>
                   <legend>Ingrediente {index + 1}</legend>
-                  <IngredientReferenceField binding={field('ingredientId')} name={row.name} />
+                  <Field id={id} label="Ingrediente" value={row.ingredientId} error={errors[id]} required
+                    disabled={!showIngredientSearch} onChange={(event) => {
+                      const value = event.target.value
+                      onChange((recipe) => {
+                        const rows = selectIngredient(matches, recipe.ingredients, row.id, value)
+                        return rows === recipe.ingredients ? recipe : { ...recipe, ingredients: rows }
+                      })
+                    }}>
+                    <option value="" disabled>Selecciona un ingrediente</option>
+                    {choices.map(({ id, label, disabled }) => <option key={id} value={id} disabled={disabled}>{label}</option>)}
+                  </Field>
                   <div className="cook-two-fields">
                     <Field {...field('quantity')} label="Cantidad" inputMode="decimal" disabled={row.unit === 'AL_GUSTO'} required={row.unit !== 'AL_GUSTO'} />
                     <Field {...field('unit')} label="Unidad" options={ingredientUnits} required />
                   </div>
                   <Field {...field('order')} label="Orden" inputMode="numeric" required />
                   <Field {...field('note')} label="Nota (opcional)" maxLength={255} />
-                  <button className="site-button" type="button" onClick={() => removeRow('ingredients', row.id, '#recipe-add-ingredient')}
+                  <button className="site-button" type="button" onClick={() => removeIngredient(row.id)}
                     aria-label={`Quitar ingrediente ${index + 1}`}>Quitar</button>
                 </fieldset>
               )
             })}
-            <button id="recipe-add-ingredient" className="site-button" type="button" disabled={draft.ingredients.length >= maxItems.ingredients}
+            <button id="recipe-add-ingredient" className="site-button" type="button" disabled={!canAddIngredient(draft.ingredients)}
               aria-invalid={errors.ingredients ? true : undefined} aria-describedby={errors.ingredients ? 'cook-ingredient-error' : undefined}
               onClick={() => addRow('ingredients', 'ingredient', 'ingredientId', { ingredientId: '', name: '', quantity: '', unit: 'G', note: '' })}>+ Agregar ingrediente</button>
             {errors.ingredients && <p id="cook-ingredient-error" className="cook-error">{errors.ingredients}</p>}
@@ -181,7 +219,7 @@ export default function RecipeEditorForm({
           {creating && <p className="cook-muted">Guarda el borrador para poder enviarlo a revisión desde su editor.</p>}
           <div className="cook-actions">
             <button className="site-button cook-primary" type="submit" disabled={blocked}>{creating ? 'Guardar borrador' : 'Guardar cambios'}</button>
-            {onReview && <button className="site-button" type="button" disabled={blocked} onClick={onReview}>Enviar a revisión</button>}
+            {onReview && <button className="site-button" type="button" disabled={blocked} onClick={onReview}>{reviewLabel}</button>}
           </div>
           {Object.keys(errors).length > 0 && <p className="cook-error" role="status">Revisa los campos indicados.</p>}
         </div>
