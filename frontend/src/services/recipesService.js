@@ -73,6 +73,13 @@ export async function getCategories(signal) {
   return data
 }
 
+export async function getIngredients(signal) {
+  const data = await publicRequest('/ingredientes', signal)
+  if (!list(data, (row) => positive(row?.id) && named(row.nombre))
+    || new Set(data.map(({ id }) => id)).size !== data.length) throw unexpected()
+  return data
+}
+
 export async function getRecipeById(id, servings, signal) {
   if (!positive(id)) throw new RangeError('El ID debe ser un entero positivo.')
   if (servings !== undefined && !validServings(servings)) {

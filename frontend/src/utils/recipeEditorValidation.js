@@ -1,4 +1,5 @@
 import { ingredientUnits, mediaTypes, recipeTypes } from '../data/recipeEditorOptions.js'
+import { isReviewableRecipe } from './cookRecipeRules.js'
 
 export const maxItems = { categories: 100, ingredients: 500, multimedia: 100 }
 export const blankDraft = {
@@ -62,7 +63,10 @@ export function validateRecipeDraft(recipe) {
   const ingredientOrders = new Set()
   if (Array.isArray(recipe.ingredients)) recipe.ingredients.forEach(({ id, ingredientId, unit, quantity, note, order }) => {
     const prefix = `ingredient-${id}`
-    uniquePositive(ingredientId, ids, `${prefix}-ingredientId`, 'ID de ingrediente')
+    const ingredientKey = `${prefix}-ingredientId`
+    if (!positiveInteger(ingredientId)) errors[ingredientKey] = 'Selecciona un ingrediente.'
+    else if (ids.has(Number(ingredientId))) errors[ingredientKey] = 'Ingrediente repetido.'
+    else ids.add(Number(ingredientId))
     uniquePositive(order, ingredientOrders, `${prefix}-order`, 'Orden', javaIntMax)
     if (!Object.hasOwn(ingredientUnits, unit)) errors[`${prefix}-unit`] = 'Selecciona una unidad válida.'
     else if (unit === 'AL_GUSTO' && quantity !== null) errors[`${prefix}-unit`] = 'Al gusto requiere cantidad nula.'
@@ -85,7 +89,7 @@ export function validateRecipeDraft(recipe) {
 
 export function validateRecipeForReview(recipe, record) {
   const errors = validateRecipeDraft(recipe)
-  if (record?.estado !== 'BORRADOR' || record.eliminadoEn !== null) errors.state = 'Solo se puede enviar un borrador activo.'
+  if (!isReviewableRecipe(record)) errors.state = 'Solo se puede enviar un borrador o una receta rechazada que no esté dada de baja.'
   if (!recipe.categories?.length) errors.categories ??= 'Selecciona al menos una categoría.'
   if (!recipe.ingredients?.length) errors.ingredients ??= 'Agrega al menos un ingrediente.'
   return errors
