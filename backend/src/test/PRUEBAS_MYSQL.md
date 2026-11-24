@@ -25,7 +25,7 @@ Remove-Variable clave
 .\mvnw.cmd '-Dmysql.it=true' '-Dtest=MySqlIntegridadTest' test
 ```
 
-Las pruebas comprueban el esquema vacío, ejecutan V1–V6 mediante Flyway y dejan esas tablas y su historial en el esquema dedicado. Para repetir, crear **otro esquema vacío** con nombre distinto y actualizar `MYSQL_IT_SCHEMA`: la suite no reutiliza ni elimina el anterior. Si Flyway falla parcialmente, inspeccionar ese esquema sin ejecutar limpiezas automáticas; MySQL puede confirmar DDL implícitamente.
+Las pruebas comprueban el esquema vacío, ejecutan V1–V7 mediante Flyway y dejan esas tablas y su historial en el esquema dedicado. Para repetir, crear **otro esquema vacío** con nombre distinto y actualizar `MYSQL_IT_SCHEMA`: la suite no reutiliza ni elimina el anterior. Si Flyway falla parcialmente, inspeccionar ese esquema sin ejecutar limpiezas automáticas; MySQL puede confirmar DDL implícitamente.
 
 El comando normal `mvnw.cmd test` no habilita la suite MySQL y no necesita credenciales; requiere el parámetro explícito `-Dmysql.it=true`. La contraseña solo vive en el entorno del proceso actual: al terminar, retirarla con `Remove-Item Env:MYSQL_IT_PASSWORD`. Usar una cuenta con privilegios limitados es indispensable: el nombre del esquema es una defensa adicional, no sustituye el aislamiento por permisos ni protege frente a configuración externa de MySQL como triggers o vistas ajenas.
 
@@ -37,7 +37,7 @@ Con otro esquema dedicado vacío y las mismas variables `MYSQL_IT_*`, ejecutar:
 .\mvnw.cmd '-Djpa.mysql.it=true' '-Dtest=IdentidadJpaMySqlTest' test
 ```
 
-La prueba arranca Spring con `dev`, aplica V1–V6 y valida los mapeos con Hibernate;
+La prueba arranca Spring con `dev`, aplica V1–V7 y valida los mapeos con Hibernate;
 usa transacciones revertidas para usuarios y asignaciones de prueba. No ejecutar
 ambas suites contra el mismo esquema: cada una exige una base inicialmente vacía.
 
@@ -59,7 +59,9 @@ Con otro esquema dedicado y vacío, y las mismas variables `MYSQL_IT_*`:
 .\mvnw.cmd '-Drecetas.mysql.it=true' '-Dtest=RecetasJpaMySqlTest' test
 ```
 
-La prueba aplica V1–V6, valida los mapeos con Hibernate y carga datos ficticios en ese esquema. No reutilizarlo para otras suites; no se ejecuta Flyway clean.
+La prueba aplica V1–V7, valida los mapeos con Hibernate y carga datos ficticios en ese esquema. No reutilizarlo para otras suites; no se ejecuta Flyway clean.
+
+La suite de recetas también comprueba rollback de moderación con un trigger temporal de prueba en `auditoria_moderacion`; necesita el privilegio `TRIGGER` limitado al esquema dedicado. En MySQL con binlog activo pueden existir restricciones adicionales para crear triggers; usar preferentemente una instancia aislada con binlog desactivado, sin conceder privilegios globales al usuario de prueba. El trigger se elimina en `finally`, sin alterar migraciones ni restricciones. Si la ejecución se interrumpe, inspeccionar el esquema aislado; no reutilizarlo.
 
 ## Favoritos por HTTP y MySQL
 
@@ -69,7 +71,8 @@ Con otro esquema dedicado, autorizado y vacío, y las mismas variables `MYSQL_IT
 .\mvnw.cmd '-Dfavoritos.mysql.it=true' '-Dtest=FavoritosMySqlTest' test
 ```
 
-La prueba verifica el esquema vacío y ejecuta Flyway y Hibernate en `dev`.
+La prueba verifica el esquema vacío, aplica V1–V7 con Flyway y valida los
+mapeos con Hibernate en `dev`.
 Usa JWT reales de cuentas ficticias, verifica altas HTTP concurrentes y comprueba
 las asociaciones y su visibilidad directamente con MySQL. No reutiliza ni limpia
 el esquema; para repetir la suite se necesita otro vacío.

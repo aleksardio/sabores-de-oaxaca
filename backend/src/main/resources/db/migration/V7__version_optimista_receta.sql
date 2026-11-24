@@ -1,0 +1,1 @@
+ALTER TABLE recetas ADD COLUMN version_receta BIGINT NOT NULL DEFAULT 0;

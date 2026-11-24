@@ -32,7 +32,7 @@ class MigracionV6MySqlTest {
             assertEquals(5, v5.migrate().migrationsExecuted);
             sentencia.executeUpdate("INSERT INTO usuarios(correo,nombre_visible,contrasena_hash,version_tokens,creado_en,actualizado_en) VALUES ('v6@ejemplo.invalid','Ejemplo','hash-ficticio',37,'2026-01-01 00:00:00','2026-01-01 00:00:00')");
             sentencia.executeUpdate("INSERT INTO usuarios_roles(usuario_id,rol_id,asignado_en) SELECT u.id,r.id,'2026-01-01 00:00:00' FROM usuarios u CROSS JOIN roles r WHERE u.correo='v6@ejemplo.invalid' AND r.codigo='USUARIO'");
-            var migrador = Flyway.configure().dataSource(url, user, password).cleanDisabled(true).load();
+            var migrador = Flyway.configure().dataSource(url, user, password).target("6").cleanDisabled(true).load();
             assertEquals(1, migrador.migrate().migrationsExecuted);
             assertEquals(0, migrador.migrate().migrationsExecuted);
             try (var r = sentencia.executeQuery("SELECT u.nombre_visible,u.contrasena_hash,u.version_tokens,u.version_perfil,r.codigo FROM usuarios u JOIN usuarios_roles ur ON ur.usuario_id=u.id JOIN roles r ON r.id=ur.rol_id WHERE u.correo='v6@ejemplo.invalid'")) {

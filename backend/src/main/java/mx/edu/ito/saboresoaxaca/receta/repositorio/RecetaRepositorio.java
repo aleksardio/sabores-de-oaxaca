@@ -15,4 +15,10 @@ public interface RecetaRepositorio extends Repository<Receta, Long> {
 
     @Query("select r from Receta r join fetch r.autor a where r.id = :id and r.estado = 'PUBLICADA' and r.eliminadoEn is null and a.eliminadoEn is null")
     Optional<Receta> buscarDetallePublico(@Param("id") Long id);
+
+    @Query(value = "select r from Receta r where r.autor.id = :autor order by r.id asc", countQuery = "select count(r) from Receta r where r.autor.id = :autor")
+    Page<Receta> buscarPropias(@Param("autor") Long autor, Pageable pagina);
+
+    @Query("select r from Receta r where r.id = :id and r.autor.id = :autor")
+    Optional<Receta> buscarPropia(@Param("id") Long id, @Param("autor") Long autor);
 }

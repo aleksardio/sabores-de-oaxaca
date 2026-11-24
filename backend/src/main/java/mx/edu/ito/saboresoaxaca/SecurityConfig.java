@@ -3,6 +3,7 @@ package mx.edu.ito.saboresoaxaca;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import jakarta.servlet.DispatcherType;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -35,8 +36,15 @@ class SecurityConfig {
                 .cors(cors -> { })
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
+                .requestMatchers(request -> request.getDispatcherType() == DispatcherType.ERROR && "/error".equals(request.getServletPath())).permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/public/health").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/recetas", "/api/v1/recetas/{id}", "/api/v1/categorias").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/mis-recetas", "/api/v1/mis-recetas/{id}").authenticated()
+                .requestMatchers(HttpMethod.POST, "/api/v1/mis-recetas").authenticated()
+                .requestMatchers(HttpMethod.PUT, "/api/v1/mis-recetas/{id}").authenticated()
+                .requestMatchers(HttpMethod.DELETE, "/api/v1/mis-recetas/{id}").authenticated()
+                .requestMatchers(HttpMethod.POST, "/api/v1/mis-recetas/{id}/enviar-revision").authenticated()
+                .requestMatchers("/api/v1/moderacion/recetas", "/api/v1/moderacion/recetas/**").authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/v1/auth/registro").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/auth/me").authenticated()
@@ -93,6 +101,14 @@ class SecurityConfig {
         CorsConfiguration favoritos = new CorsConfiguration(config);
         favoritos.setAllowedMethods(List.of("POST", "DELETE"));
         source.registerCorsConfiguration("/api/v1/favoritos/{recetaId}", favoritos);
+
+        CorsConfiguration privadas = new CorsConfiguration(config);
+        privadas.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE"));
+        privadas.setAllowedHeaders(List.of("Content-Type", "Authorization", "If-Match"));
+        source.registerCorsConfiguration("/api/v1/mis-recetas/*", privadas);
+        source.registerCorsConfiguration("/api/v1/mis-recetas/*/enviar-revision", privadas);
+        source.registerCorsConfiguration("/api/v1/moderacion/recetas/**", privadas);
+
         source.registerCorsConfiguration("/api/v1/**", config);
         return source;
     }
