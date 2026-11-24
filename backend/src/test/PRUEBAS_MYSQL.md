@@ -60,3 +60,5 @@ Con otro esquema dedicado y vacío, y las mismas variables `MYSQL_IT_*`:
 ```
 
 La prueba aplica V1–V7, valida los mapeos con Hibernate y carga datos ficticios en ese esquema. No reutilizarlo para otras suites; no se ejecuta Flyway clean.
+
+La suite de recetas también comprueba rollback de moderación con un trigger temporal de prueba en `auditoria_moderacion`; necesita el privilegio `TRIGGER` limitado al esquema dedicado. En MySQL con binlog activo pueden existir restricciones adicionales para crear triggers; usar preferentemente una instancia aislada con binlog desactivado, sin conceder privilegios globales al usuario de prueba. El trigger se elimina en `finally`, sin alterar migraciones ni restricciones. Si la ejecución se interrumpe, inspeccionar el esquema aislado; no reutilizarlo.

@@ -49,6 +49,11 @@ public class Receta {
         this.estado = "PENDIENTE";
         this.actualizadoEn = ahora;
     }
+    public void resolverModeracion(boolean aprobar, LocalDateTime ahora) {
+        this.estado = aprobar ? "PUBLICADA" : "RECHAZADA";
+        if (aprobar && publicadoEn == null) publicadoEn = ahora;
+        this.actualizadoEn = ahora;
+    }
     public void actualizarContenido(String titulo, String descripcion, String preparacion, String tipo, Integer porcionesBase, LocalDateTime ahora) {
         this.titulo = titulo; this.descripcion = descripcion; this.preparacion = preparacion;
         this.tipo = tipo; this.porcionesBase = porcionesBase;

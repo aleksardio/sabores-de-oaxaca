@@ -320,6 +320,119 @@ class RecetasJpaMySqlTest {
             assertEquals(categoriaAntes, jdbc.queryForMap("SELECT * FROM categorias WHERE id=?", categoria));
             assertEquals(detalleAntes, get(client, base + "/recetas/" + ids.get(0)).body());
             assertEquals(categoriasAntes, get(client, base + "/categorias").body());
+            assertEquals(401, get(client, base + "/moderacion/recetas").statusCode());
+            assertEquals(201, enviar(client, base + "/auth/registro", "POST", "{\"nombreVisible\":\"Revisor\",\"correo\":\"revisor@ejemplo.invalid\",\"contrasena\":\"Ejemplo1!\"}", null).statusCode());
+            var loginRevisor = enviar(client, base + "/auth/login", "POST", "{\"correo\":\"revisor@ejemplo.invalid\",\"contrasena\":\"Ejemplo1!\"}", null);
+            var matcherRevisor = java.util.regex.Pattern.compile("\"(?:accessToken|token)\":\"([^\"]+)\"").matcher(loginRevisor.body());
+            assertTrue(matcherRevisor.find());
+            String revisor = matcherRevisor.group(1);
+            Long revisorId = jdbc.queryForObject("SELECT id FROM usuarios WHERE correo='revisor@ejemplo.invalid'", Long.class);
+            assertEquals(403, enviar(client, base + "/moderacion/recetas", "GET", "", revisor).statusCode());
+            jdbc.update("INSERT INTO usuarios_roles(usuario_id,rol_id,asignado_en) SELECT ?,id,NOW(6) FROM roles WHERE codigo='COCINERO'", revisorId);
+            assertEquals(403, enviar(client, base + "/moderacion/recetas", "GET", "", revisor).statusCode());
+            jdbc.update("INSERT INTO usuarios_roles(usuario_id,rol_id,asignado_en) SELECT ?,id,NOW(6) FROM roles WHERE codigo='COCINERO'", nuevoAutor);
+            var nuevaModeracion = enviar(client, base + "/mis-recetas", "POST", cuerpo.replace("Nueva", "Por moderar"), jwt);
+            assertEquals(201, nuevaModeracion.statusCode(), nuevaModeracion.body());
+            Long modId = jdbc.queryForObject("SELECT id FROM recetas WHERE titulo='Por moderar'", Long.class);
+            assertEquals(200, accion(client, base + "/mis-recetas/" + modId + "/enviar-revision", "POST", 0, jwt).statusCode());
+            assertEquals(403, accion(client, base + "/moderacion/recetas/" + modId + "/aprobar", "POST", 1, jwt).statusCode());
+            jdbc.update("INSERT INTO usuarios_roles(usuario_id,rol_id,asignado_en) SELECT ?,id,NOW(6) FROM roles WHERE codigo='MODERADOR'", revisorId);
+            assertEquals(200, enviar(client, base + "/moderacion/recetas", "GET", "", revisor).statusCode());
+            assertEquals(401, get(client, "http://127.0.0.1:" + portHttp + "/error").statusCode());
+            assertEquals(403, enviar(client, "http://127.0.0.1:" + portHttp + "/error", "GET", "", revisor).statusCode());
+            assertEquals(403, enviar(client, base + "/ruta-protegida-inexistente", "GET", "", revisor).statusCode());
+            assertEquals(404, enviar(client, base + "/moderacion/recetas/99999999", "GET", "", revisor).statusCode());
+            assertEquals(200, enviar(client, base + "/moderacion/recetas/" + modId, "GET", "", revisor).statusCode());
+            assertEquals(409, accion(client, base + "/moderacion/recetas/" + modId + "/aprobar", "POST", 0, revisor).statusCode());
+            var aprobada = accion(client, base + "/moderacion/recetas/" + modId + "/aprobar", "POST", 1, revisor);
+            assertEquals(200, aprobada.statusCode(), aprobada.body());
+            assertTrue(aprobada.body().contains("\"version\":2"));
+            assertEquals(200, get(client, base + "/recetas/" + modId).statusCode());
+            assertEquals(409, accion(client, base + "/moderacion/recetas/" + modId + "/aprobar", "POST", 2, revisor).statusCode());
+            assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM auditoria_moderacion WHERE receta_id=? AND actor_id=? AND accion='APROBAR'", Integer.class, modId, revisorId));
+            var segunda = enviar(client, base + "/mis-recetas", "POST", cuerpo.replace("Nueva", "Rechazar"), jwt);
+            assertEquals(201, segunda.statusCode());
+            Long rechazoId = jdbc.queryForObject("SELECT id FROM recetas WHERE titulo='Rechazar'", Long.class);
+            assertEquals(200, accion(client, base + "/mis-recetas/" + rechazoId + "/enviar-revision", "POST", 0, jwt).statusCode());
+            var reqRechazo = java.net.http.HttpRequest.newBuilder(java.net.URI.create(base + "/moderacion/recetas/" + rechazoId + "/rechazar")).header("If-Match", "\"1\"").header("Authorization", "Bearer " + revisor).header("Content-Type", "application/json").POST(java.net.http.HttpRequest.BodyPublishers.ofString("{\"motivo\":\"Faltan detalles\"}")).build();
+            assertEquals(200, client.send(reqRechazo, java.net.http.HttpResponse.BodyHandlers.ofString()).statusCode());
+            assertEquals("Faltan detalles", jdbc.queryForObject("SELECT detalle FROM auditoria_moderacion WHERE receta_id=? AND accion='RECHAZAR'", String.class, rechazoId));
+            assertEquals(404, get(client, base + "/recetas/" + rechazoId).statusCode());
+            assertEquals(409, client.send(reqRechazo, java.net.http.HttpResponse.BodyHandlers.ofString()).statusCode());
+            assertEquals(409, accion(client, base + "/moderacion/recetas/" + propia + "/aprobar", "POST", 0, revisor).statusCode());
+            var tercero = enviar(client, base + "/mis-recetas", "POST", cuerpo.replace("Nueva", "Concurrencia moderacion"), jwt);
+            assertEquals(201, tercero.statusCode());
+            Long carreraId = jdbc.queryForObject("SELECT id FROM recetas WHERE titulo='Concurrencia moderacion'", Long.class);
+            assertEquals(200, accion(client, base + "/mis-recetas/" + carreraId + "/enviar-revision", "POST", 0, jwt).statusCode());
+            String urlAprobar = base + "/moderacion/recetas/" + carreraId + "/aprobar";
+            var poolMod = java.util.concurrent.Executors.newFixedThreadPool(2);
+            var salidaMod = new java.util.concurrent.CountDownLatch(1);
+            try {
+                var a = poolMod.submit(() -> { salidaMod.await(); return accion(client, urlAprobar, "POST", 1, revisor); });
+                var b = poolMod.submit(() -> { salidaMod.await(); return accion(client, urlAprobar, "POST", 1, revisor); });
+                salidaMod.countDown();
+                var estados = List.of(a.get().statusCode(), b.get().statusCode());
+                assertTrue(estados.contains(200) && estados.contains(409), estados.toString());
+            } finally { poolMod.shutdownNow(); }
+            assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM auditoria_moderacion WHERE receta_id=?", Integer.class, carreraId));
+            var propiaRevisor = enviar(client, base + "/mis-recetas", "POST", cuerpo.replace("Nueva", "Por admin"), revisor);
+            assertEquals(201, propiaRevisor.statusCode());
+            Long adminId = jdbc.queryForObject("SELECT id FROM recetas WHERE titulo='Por admin'", Long.class);
+            assertEquals(200, accion(client, base + "/mis-recetas/" + adminId + "/enviar-revision", "POST", 0, revisor).statusCode());
+            assertEquals(200, accion(client, base + "/moderacion/recetas/" + adminId + "/aprobar", "POST", 1, jwt).statusCode());
+
+            // El trigger existe exclusivamente en el esquema aislado de esta suite y falla después del flush de la receta.
+            for (String decision : List.of("aprobar", "rechazar")) {
+                String titulo = "Rollback auditoria " + decision;
+                assertEquals(201, enviar(client, base + "/mis-recetas", "POST", cuerpo.replace("Nueva", titulo), jwt).statusCode());
+                Long rollbackId = jdbc.queryForObject("SELECT id FROM recetas WHERE titulo=?", Long.class, titulo);
+                assertEquals(200, accion(client, base + "/mis-recetas/" + rollbackId + "/enviar-revision", "POST", 0, jwt).statusCode());
+                jdbc.execute("CREATE TRIGGER it_fallo_auditoria BEFORE INSERT ON auditoria_moderacion FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'fallo controlado de prueba'");
+                try {
+                    var resultado = decision.equals("aprobar")
+                            ? accion(client, base + "/moderacion/recetas/" + rollbackId + "/aprobar", "POST", 1, revisor)
+                            : rechazar(client, base + "/moderacion/recetas/" + rollbackId + "/rechazar", 1, revisor);
+                    assertEquals(500, resultado.statusCode(), resultado.body());
+                    assertEquals("{\"error\":\"Error interno del servidor\"}", resultado.body());
+                } finally { jdbc.execute("DROP TRIGGER it_fallo_auditoria"); }
+                assertEquals("PENDIENTE", jdbc.queryForObject("SELECT estado FROM recetas WHERE id=?", String.class, rollbackId));
+                assertEquals(1L, jdbc.queryForObject("SELECT version_receta FROM recetas WHERE id=?", Long.class, rollbackId));
+                assertNull(jdbc.queryForObject("SELECT publicado_en FROM recetas WHERE id=?", java.sql.Timestamp.class, rollbackId));
+                assertEquals(0, jdbc.queryForObject("SELECT COUNT(*) FROM auditoria_moderacion WHERE receta_id=?", Integer.class, rollbackId));
+                assertEquals(404, get(client, base + "/recetas/" + rollbackId).statusCode());
+            }
+
+            assertEquals(201, enviar(client, base + "/mis-recetas", "POST", cuerpo.replace("Nueva", "Decisiones opuestas"), jwt).statusCode());
+            Long opuestasId = jdbc.queryForObject("SELECT id FROM recetas WHERE titulo='Decisiones opuestas'", Long.class);
+            assertEquals(200, accion(client, base + "/mis-recetas/" + opuestasId + "/enviar-revision", "POST", 0, jwt).statusCode());
+            var poolOpuestas = java.util.concurrent.Executors.newFixedThreadPool(2);
+            var iniciarOpuestas = new java.util.concurrent.CountDownLatch(1);
+            try (var bloqueo = DriverManager.getConnection(url, user, password)) {
+                bloqueo.setAutoCommit(false);
+                try (var s = bloqueo.prepareStatement("SELECT id FROM recetas WHERE id=? FOR UPDATE")) {
+                    s.setLong(1, opuestasId);
+                    try (var rs = s.executeQuery()) { assertTrue(rs.next()); }
+                }
+                try {
+                    var aprobar = poolOpuestas.submit(() -> { iniciarOpuestas.await(); return accion(client, base + "/moderacion/recetas/" + opuestasId + "/aprobar", "POST", 1, revisor); });
+                    var rechazar = poolOpuestas.submit(() -> { iniciarOpuestas.await(); return rechazar(client, base + "/moderacion/recetas/" + opuestasId + "/rechazar", 1, revisor); });
+                    iniciarOpuestas.countDown();
+                    // Las escrituras no pueden confirmar hasta liberar el bloqueo de fila mantenido por esta conexión.
+                    Thread.sleep(1000);
+                    assertFalse(aprobar.isDone());
+                    assertFalse(rechazar.isDone());
+                    bloqueo.rollback();
+                    var codigos = List.of(aprobar.get(30, java.util.concurrent.TimeUnit.SECONDS).statusCode(), rechazar.get(30, java.util.concurrent.TimeUnit.SECONDS).statusCode());
+                    assertTrue(codigos.contains(200) && codigos.contains(409), codigos.toString());
+                } finally { bloqueo.rollback(); }
+            } finally { poolOpuestas.shutdownNow(); }
+            String estadoFinal = jdbc.queryForObject("SELECT estado FROM recetas WHERE id=?", String.class, opuestasId);
+            assertTrue(List.of("PUBLICADA", "RECHAZADA").contains(estadoFinal));
+            assertEquals(2L, jdbc.queryForObject("SELECT version_receta FROM recetas WHERE id=?", Long.class, opuestasId));
+            assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM auditoria_moderacion WHERE receta_id=?", Integer.class, opuestasId));
+            assertEquals(estadoFinal, jdbc.queryForObject("SELECT estado_receta_nuevo FROM auditoria_moderacion WHERE receta_id=?", String.class, opuestasId));
+            assertEquals(estadoFinal.equals("PUBLICADA") ? "APROBAR" : "RECHAZAR", jdbc.queryForObject("SELECT accion FROM auditoria_moderacion WHERE receta_id=?", String.class, opuestasId));
+            System.out.println("CONCURRENCIA_MODERACION estado=" + estadoFinal + " version=2 auditorias=1");
         }
     }
     private static java.net.http.HttpResponse<String> get(java.net.http.HttpClient client, String url) throws Exception {
@@ -329,6 +442,12 @@ class RecetasJpaMySqlTest {
         var b = java.net.http.HttpRequest.newBuilder(java.net.URI.create(url)).header("If-Match", "\"" + version + "\"");
         if (jwt != null) b.header("Authorization", "Bearer " + jwt);
         return client.send(b.method(metodo, java.net.http.HttpRequest.BodyPublishers.noBody()).build(), java.net.http.HttpResponse.BodyHandlers.ofString());
+    }
+    private static java.net.http.HttpResponse<String> rechazar(java.net.http.HttpClient client, String url, long version, String jwt) throws Exception {
+        var request = java.net.http.HttpRequest.newBuilder(java.net.URI.create(url)).header("If-Match", "\"" + version + "\"")
+                .header("Authorization", "Bearer " + jwt).header("Content-Type", "application/json")
+                .POST(java.net.http.HttpRequest.BodyPublishers.ofString("{\"motivo\":\"Prueba de rechazo\"}")).build();
+        return client.send(request, java.net.http.HttpResponse.BodyHandlers.ofString());
     }
     private static java.net.http.HttpResponse<String> preflight(java.net.http.HttpClient client, String url, String origen, String metodo, String headers) throws Exception {
         var request = java.net.http.HttpRequest.newBuilder(java.net.URI.create(url)).header("Origin", origen)
