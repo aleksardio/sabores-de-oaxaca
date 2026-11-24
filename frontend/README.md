@@ -92,13 +92,15 @@ El JWT solo vive en memoria.
 | `PUT /mis-recetas/{id}` | Reemplaza el contenido completo, con `version` en el JSON. Solo `BORRADOR` y `RECHAZADA` activas. Conserva la nueva versión del `200`. |
 | `POST /mis-recetas/{id}/enviar-revision` | Envía `BORRADOR` o reenvía `RECHAZADA`, siempre que sea propia, activa y completa. Si hay cambios, primero los guarda por PUT. Envía `If-Match` con la versión vigente entre comillas (p. ej. `"4"`), sin cuerpo. Solo tras un `200` válido muestra `PENDIENTE`, no `PUBLICADA`. |
 | `DELETE /mis-recetas/{id}` | Confirma explícitamente y envía `If-Match` entre comillas, sin cuerpo. Tras `204` vuelve a consultar el detalle. La baja no cambia el estado editorial y no se puede restaurar desde aquí. |
+| `POST /multimedia/uploads` | Sube un archivo con la sesión de cocinero. No modifica la receta. |
 | `GET /categorias` | Carga el catálogo con el servicio público existente, sin Bearer. |
 | `GET /ingredientes` | Carga el catálogo público sin JWT como un arreglo de `{id, nombre}` en el orden del servidor. |
 
 Contrato: [RECETAS_COCINERO_API.md](../backend/docs/RECETAS_COCINERO_API.md).
 El borrador permite guardar sin categorías, ingredientes ni multimedia.
-Para revisión se requiere al menos una categoría y un ingrediente. Multimedia
-solo admite referencias HTTPS (`IMAGEN` o `VIDEO`), sin subida de archivos.
+Para revisión se requiere al menos una categoría y un ingrediente. En el JSON
+de la receta, multimedia sigue siendo una lista de referencias HTTPS (`IMAGEN`
+o `VIDEO`), no los archivos.
 El editor conserva los IDs, nombres y cantidades base del detalle y vuelve
 a enviar las asociaciones completas al guardar.
 
@@ -160,6 +162,80 @@ con HTTP simulado, se comprobaron creación, edición, catálogo vacío y fallid
 selector por teclado, vista previa, rechazo, reenvío y `409` a 320, 390, 768 y
 1440 px, sin desplazamiento horizontal. La validación de extremo a extremo
 con Spring Boot y MySQL (roles, referencias y concurrencia real) queda pendiente.
+
+#### Subir fotos y videos
+
+`POST /api/v1/multimedia/uploads` requiere Bearer JWT y rol `COCINERO`.
+Se envía un solo archivo por solicitud en `multipart/form-data`, con el
+campo exacto `archivo`. El navegador genera el `boundary` y la sesión añade
+el Bearer sin exponerlo al formulario. Solo se confirma con HTTP `201` y un
+JSON válido:
+
+```json
+{
+  "tipo": "IMAGEN",
+  "url": "https://archivos.example/uploads/foto.jpg",
+  "nombreOriginal": "foto.jpg",
+  "tamanoBytes": 12345
+}
+```
+
+| Archivos | MIME | Máximo |
+| --- | --- | --- |
+| `.jpg`, `.jpeg`; `.png`; `.webp` | `image/jpeg`; `image/png`; `image/webp` | 5 MiB (5 242 880 bytes) |
+| `.mp4`; `.webm` | `video/mp4`; `video/webm` | 30 MiB (31 457 280 bytes) |
+
+El editor comprueba la extensión y el tamaño no nulo. Si el navegador no
+declara un MIME, se usa el de la extensión admitida en el archivo multipart,
+sin cambiar sus bytes, nombre ni fecha de modificación. Si declara un MIME
+incompatible, el editor rechaza el archivo en vez de sustituirlo. Spring Boot
+comprueba el MIME declarado y la firma real del archivo. La respuesta debe
+tener el tipo del archivo, URL HTTPS sin credenciales, nombre no vacío y tamaño
+entero positivo dentro del límite. El origen público de multimedia está **pendiente de
+confirmación**: se usa la URL que devuelve la API, sin imponer un dominio.
+Los videos locales tienen controles y no se reproducen solos; las referencias
+remotas de video se muestran como enlaces HTTPS, sin incrustar reproductores
+de orígenes no verificados.
+
+> **Privacidad:** Los archivos subidos serán públicos aunque la receta
+> todavía sea un borrador. No subas información privada ni fotografías o
+> videos sin autorización. El editor muestra este aviso antes de seleccionar
+> o subir archivos.
+
+1. En **Multimedia**, elige una foto o un video. El editor muestra nombre,
+   tamaño y vista previa local. Puedes cambiar de archivo o alternar entre
+   **Editar** y **Vista previa** sin perderlo.
+2. Pulsa **Subir archivo**. Se sube uno a la vez, sin porcentajes ni
+   reintentos automáticos. Un `400` indica archivo rechazado; un `413`, tamaño
+   excesivo; un `500`, error interno. Un `401` invalida la sesión; un `403`
+   no la cierra. Si falla la conexión, se cancela o el `201` no es válido,
+   la subida no se puede confirmar. Comprueba el estado antes de reintentar
+   manualmente: el servidor podría haber recibido el archivo.
+3. Tras **Archivo subido. Guarda la receta para asociarlo.**, ajusta el orden
+   y texto alternativo y guarda explícitamente. Solo se envían `tipo`, `url`,
+   `textoAlternativo` y `orden` por referencia. Un guardado fallido conserva la
+   subida confirmada. Si hay archivos pendientes, con error o cancelados,
+   resuélvelos o quítalos antes de guardar o enviar a revisión.
+4. **Quitar referencia** solo cambia el formulario, no borra el archivo del
+   VPS. En una receta existente, hay que guardar el cambio con éxito para que
+   se aplique. No hay endpoint de borrado físico; el backend gestionará los
+   archivos huérfanos. Cerrar el editor descarta las vistas previas locales
+   y los cambios que no se guardaron.
+
+La comprobación en Chromium a **320, 390, 768 y 1440 px** usó respuestas
+HTTP simuladas. Cubrió selección, reemplazo, vistas previas, error y reintento,
+cancelación, retirada, guardado, edición, conflicto y visualización en el
+detalle público y moderación, sin desplazamiento horizontal.
+
+**Pruebas reales pendientes:** cuando Aleks confirme el despliegue y el origen
+público, usa un entorno de pruebas autorizado y una cuenta `COCINERO` de prueba.
+Sube una imagen y un video pequeños y confirma en Red que cada solicitud tiene
+un `archivo`, devuelve `201` y una URL pública HTTPS que realmente sirve el
+archivo. Guarda y reabre el borrador, quita una referencia y vuelve a guardar;
+comprueba que el detalle y la moderación muestran la asociación esperada.
+Prueba además un formato que deba rechazarse, exceso de tamaño y una cuenta de
+prueba sin el rol. No uses credenciales reales ni subas archivos a producción
+para verificar este cambio. Las pruebas con HTTP simulado no comprueban el VPS.
 
 ### Panel de moderación
 
@@ -437,7 +513,8 @@ o un 404 muestra «Receta no encontrada». No se imputa región ni duración,
 ni se ofrecen filtros por ingredientes o video. El listado no incluye fotos.
 En el detalle se usa la primera imagen HTTPS utilizable, con texto alternativo.
 Sin imagen (URL ausente, `*.invalid`, video o carga fallida) se muestra
-`DishIllustration`. No se reproducen videos. La preparación se muestra como
+`DishIllustration`. Los videos se ofrecen como enlaces HTTPS, sin
+reproducción incrustada mientras no se confirme su origen. La preparación se muestra como
 texto, sin HTML, y puede estar vacía.
 
 Reportes y administración conservan datos de demostración en
@@ -461,7 +538,7 @@ y otro de más de seis recetas, categorías múltiples, 404 y cantidades ajustad
 ## Comprobaciones locales
 
 ```sh
-npm test         # Autenticación, favoritos, recetario, cocinero y moderación con HTTP simulado
+npm test         # Autenticación, favoritos, recetario, cocinero, multimedia y moderación con HTTP simulado
 npm run build    # Genera dist/
 npm run lint     # Revisa el código con ESLint
 npm run preview  # Sirve la compilación localmente después de build

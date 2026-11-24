@@ -1,14 +1,18 @@
-import { useCallback, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router'
+import { useAuth } from '../auth/useAuth.js'
 import RecipeDraftPreview from '../components/RecipeDraftPreview.jsx'
 import RecipeEditorForm from '../components/RecipeEditorForm.jsx'
 import RequestError from '../components/RequestError.jsx'
 import { useCookRecipes } from '../hooks/useCookRecipes.js'
 import { usePublicRequest } from '../hooks/usePublicRequest.js'
+import { createMultimediaService } from '../services/multimediaService.js'
 import { getCategories, getIngredients, parseRecipeId } from '../services/recipesService.js'
 import { canDeleteRecipe, canEditRecipe, canReviewRecipe, canWriteRecipes, recipeStates } from '../utils/cookRecipeRules.js'
-import { blankDraft, draftFromDetail, toRecipeBody, validateRecipeDraft, validateRecipeForReview } from '../utils/recipeEditorValidation.js'
+import { blankDraft, changedRecipeBody, draftFromDetail, maxItems, nextOrder, toRecipeBody, validateRecipeDraft, validateRecipeForReview } from '../utils/recipeEditorValidation.js'
 import { createRecipeOperation, resolveRecipeConflict, saveAndRequestReview } from '../utils/cookRecipeActions.js'
+import { createLocalPreviews, markMediaSaved } from '../utils/recipeMedia.js'
+import { validateMediaFile } from '../utils/multimediaFiles.js'
 
 const listPath = '/cocinero/recetas'
 const editPath = (id) => `${listPath}/${id}/editar`
@@ -67,6 +71,8 @@ function ConflictPanel({ draft, record, server, pending, loadError, onLoad, onRe
 
 function RecipeWorkspace({ mode, initialRecipe, user, service, created }) {
   const navigate = useNavigate()
+  const { requestAuthenticated } = useAuth()
+  const multimedia = useMemo(() => createMultimediaService(requestAuthenticated, user), [requestAuthenticated, user])
   const [record, setRecord] = useState(initialRecipe)
   const [baseline, setBaseline] = useState(() => initialRecipe ? draftFromDetail(initialRecipe) : blankDraft)
   const [draft, setDraft] = useState(baseline)
@@ -74,14 +80,23 @@ function RecipeWorkspace({ mode, initialRecipe, user, service, created }) {
   const [errors, setErrors] = useState({})
   const [failure, setFailure] = useState(null)
   const [pending, setPending] = useState(false)
-  const [notice, setNotice] = useState(created ? 'Borrador creado.' : '')
+  const [notice, setNotice] = useState(created ? 'Borrador guardado.' : '')
   const [conflict, setConflict] = useState(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deletionConfirmed, setDeletionConfirmed] = useState(false)
   const [refreshError, setRefreshError] = useState(null)
   const [operation] = useState(createRecipeOperation)
+  const [previews] = useState(createLocalPreviews)
+  const [mediaError, setMediaError] = useState('')
+  const nextMediaId = useRef(0)
   const confirmHeading = useRef(null)
-  useLayoutEffect(() => () => operation.cancel(), [operation])
+  useLayoutEffect(() => () => {
+    operation.cancel()
+    previews.clear()
+  }, [operation, previews])
+  useLayoutEffect(() => {
+    previews.retain(draft.multimedia)
+  }, [draft.multimedia, previews])
   useLayoutEffect(() => {
     if (confirmDelete) confirmHeading.current?.focus()
   }, [confirmDelete])
@@ -90,21 +105,92 @@ function RecipeWorkspace({ mode, initialRecipe, user, service, created }) {
   const editing = mode === 'edit' && canEditRecipe(user, record) && !deletionConfirmed
   const formAvailable = creating || editing
   const dirty = draft !== baseline
+  const uploading = draft.multimedia.some((row) => row.local?.status === 'uploading')
+  const mediaBlocked = !formAvailable || Boolean(conflict || confirmDelete)
   const categories = usePublicRequest(formAvailable ? getCategories : null)
   const ingredients = usePublicRequest(formAvailable ? getIngredients : null)
 
-  async function run(action, onError) {
-    const attempt = operation.start()
+  async function run(action, onError, mediaId) {
+    const attempt = operation.start(mediaId)
     if (!attempt) return
     setPending(true)
     try {
       await action(attempt.signal)
     } catch (error) {
-      if (!attempt.signal.aborted && error.name !== 'AbortError') onError(error)
+      if (!attempt.signal.aborted && (mediaId !== undefined || error.name !== 'AbortError')) onError(error)
     } finally {
       operation.finish(attempt)
       if (!attempt.signal.aborted) setPending(false)
     }
+  }
+
+  function replaceMedia(row, replace) {
+    setDraft((current) => ({ ...current, multimedia: current.multimedia.map((item) =>
+      item.id === row.id && item.local?.src === row.local?.src ? replace(item) : item) }))
+  }
+
+  function selectMedia(file, row) {
+    if (mediaBlocked || operation.busy || (!row && draft.multimedia.length >= maxItems.multimedia)) return
+    if (row && !previews.has(row.local?.src)) return
+    const { type, error } = validateMediaFile(file)
+    setMediaError(error ? `${file.name}: ${error}` : '')
+    if (error) return
+    const local = { file, src: previews.create(file), status: 'ready' }
+    setNotice('')
+    if (row) {
+      previews.release(row.local.src)
+      replaceMedia(row, (item) => ({ ...item, type, local }))
+    } else {
+      const id = `file-${nextMediaId.current++}`
+      setDraft((current) => ({ ...current, multimedia: current.multimedia.length < maxItems.multimedia
+        ? [...current.multimedia, { id, type, local, alt: '', order: nextOrder(current.multimedia) }]
+        : current.multimedia }))
+    }
+  }
+
+  function uploadMedia(row) {
+    if (mediaBlocked || !previews.has(row.local?.src)) return
+    run(async (signal) => {
+      setMediaError('')
+      setNotice('')
+      replaceMedia(row, (item) => ({ ...item, local: { ...row.local, status: 'uploading' } }))
+      const receipt = await multimedia.upload(row.local.file, signal)
+      signal.throwIfAborted()
+      if (!previews.has(row.local.src)) return
+      previews.release(row.local.src)
+      replaceMedia(row, ({ id, alt, order }) => ({
+        id, alt, order, type: receipt.tipo, url: receipt.url,
+        uploaded: { name: receipt.nombreOriginal, size: receipt.tamanoBytes },
+      }))
+    }, (error) => {
+      replaceMedia(row, (item) => ({ ...item, local: {
+        ...row.local, status: error.name === 'AbortError' ? 'canceled' : 'error', error: error.message,
+      } }))
+    }, row.id)
+  }
+
+  function cancelMedia(row) {
+    if (!operation.cancel(row.id)) return
+    setPending(false)
+    replaceMedia(row, (item) => ({ ...item, local: { ...row.local, status: 'canceled' } }))
+  }
+
+  function removeMedia(row) {
+    if (mediaBlocked) return
+    if (operation.busy) {
+      if (!operation.cancel(row.id)) return
+      setPending(false)
+    }
+    previews.release(row.local?.src)
+    setMediaError('')
+    setErrors({})
+    setDraft((current) => ({ ...current, multimedia: current.multimedia.filter(({ id }) => id !== row.id) }))
+  }
+
+  function confirmSavedDraft() {
+    const savedDraft = markMediaSaved(draft)
+    setDraft(savedDraft)
+    setBaseline(savedDraft)
   }
 
   function writeFailed(error) {
@@ -113,36 +199,35 @@ function RecipeWorkspace({ mode, initialRecipe, user, service, created }) {
   }
 
   function save(review = false) {
-    if (pending || conflict || confirmDelete || !formAvailable || (review && !canReviewRecipe(user, record))) return
+    if (operation.busy || mediaBlocked || (review && !canReviewRecipe(user, record))) return
     const validation = review ? validateRecipeForReview(draft, record) : validateRecipeDraft(draft)
     setErrors(validation)
     if (Object.keys(validation).length) return
     run(async (signal) => {
       setFailure(null)
       setNotice('')
-      const body = toRecipeBody(draft)
       if (creating) {
-        const saved = await service.create(body, signal)
+        const saved = await service.create(toRecipeBody(draft), signal)
         navigate(editPath(saved.id), { replace: true, state: { createdId: saved.id } })
         return
       }
       if (review) {
-        const changedBody = dirty && JSON.stringify(body) !== JSON.stringify(toRecipeBody(baseline)) ? body : null
+        const changedBody = changedRecipeBody(draft, baseline)
         const saved = await saveAndRequestReview(service, record, changedBody, signal, (updated) => {
           setRecord(updated)
-          setBaseline(draft)
+          confirmSavedDraft()
           setNotice('Cambios guardados. El envío a revisión aún no se ha confirmado.')
         })
         if (!saved) return
         setRecord({ ...record, ...saved })
-        setBaseline(draft)
+        confirmSavedDraft()
         setPreview(false)
         setNotice('Receta enviada a revisión. Está pendiente, no publicada.')
         return
       }
-      const saved = await service.update(record.id, body, record.version, signal)
+      const saved = await service.update(record.id, toRecipeBody(draft), record.version, signal)
       setRecord({ ...record, ...saved })
-      setBaseline(draft)
+      confirmSavedDraft()
       setNotice('Cambios guardados.')
     }, writeFailed)
   }
@@ -163,6 +248,8 @@ function RecipeWorkspace({ mode, initialRecipe, user, service, created }) {
       setNotice('')
       setConfirmDelete(false)
       await service.remove(record.id, record.version, signal)
+      previews.clear()
+      setDraft(baseline)
       setDeletionConfirmed(true)
       setNotice('Baja confirmada por el servidor.')
       try {
@@ -181,8 +268,13 @@ function RecipeWorkspace({ mode, initialRecipe, user, service, created }) {
   }
 
   function resolveConflict(keepLocal) {
+    if (operation.busy) return
     const { server } = conflict
     const next = resolveRecipeConflict(draft, draftFromDetail(server), keepLocal)
+    if (!keepLocal) {
+      previews.clear()
+      setMediaError('')
+    }
     setRecord(server)
     setBaseline(next.baseline)
     setDraft(next.draft)
@@ -212,12 +304,13 @@ function RecipeWorkspace({ mode, initialRecipe, user, service, created }) {
       )}
       {formAvailable && (
         <div className="cook-actions cook-mode" role="group" aria-label="Modo de la receta">
-          <button className="site-button" type="button" disabled={pending} aria-pressed={!preview} onClick={() => setPreview(false)}>Editar</button>
-          <button className="site-button" type="button" disabled={pending} aria-pressed={preview} onClick={() => setPreview(true)}>Vista previa</button>
+          <button className="site-button" type="button" disabled={pending && !uploading} aria-pressed={!preview} onClick={() => setPreview(false)}>Editar</button>
+          <button className="site-button" type="button" disabled={pending && !uploading} aria-pressed={preview} onClick={() => setPreview(true)}>Vista previa</button>
         </div>
       )}
       {!formAvailable || preview ? <RecipeDraftPreview recipe={formAvailable ? draft : baseline} /> : (
-        <RecipeEditorForm draft={draft} onChange={setDraft} errors={errors} pending={pending} blocked={Boolean(conflict || confirmDelete)}
+        <RecipeEditorForm draft={draft} onChange={setDraft} errors={errors} pending={pending} blocked={mediaBlocked}
+          mediaError={mediaError} onSelectMedia={selectMedia} onUploadMedia={uploadMedia} onCancelMedia={cancelMedia} onRemoveMedia={removeMedia}
           creating={creating} categories={categories} ingredients={ingredients} onSave={() => save()}
           onReview={canReviewRecipe(user, record) ? () => save(true) : null}
           reviewLabel={record?.estado === 'RECHAZADA' ? 'Reenviar a revisión' : 'Enviar a revisión'} />
@@ -233,11 +326,11 @@ function RecipeWorkspace({ mode, initialRecipe, user, service, created }) {
           {!deletionConfirmed && !conflict && canEditRecipe(user, record) && mode !== 'edit' &&
             <Link className="site-button cook-primary" to={editPath(record.id)}>Editar receta</Link>}
           {!deletionConfirmed && !conflict && canDeleteRecipe(user, record) && !confirmDelete &&
-            <button className="site-button" type="button" disabled={pending} onClick={() => setConfirmDelete(true)}>Dar de baja</button>}
+            <button className="site-button" type="button" disabled={pending} onClick={() => !operation.busy && setConfirmDelete(true)}>Dar de baja</button>}
         </div>
       )}
       {editing && !conflict && !confirmDelete && (
-        <div><button className="site-button" type="button" disabled={pending} onClick={() => setConfirmDelete(true)}>Dar de baja</button></div>
+        <div><button className="site-button" type="button" disabled={pending} onClick={() => !operation.busy && setConfirmDelete(true)}>Dar de baja</button></div>
       )}
       {confirmDelete && (
         <section className="cook-panel" aria-labelledby="cook-confirm-delete">

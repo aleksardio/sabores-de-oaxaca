@@ -3,18 +3,23 @@ import { isReviewableRecipe } from './cookRecipeRules.js'
 // Acquire synchronously: two events can arrive before React disables the buttons.
 export function createRecipeOperation() {
   let active
+  let owner
   return {
-    start() {
+    get busy() { return Boolean(active) },
+    start(key) {
       if (active) return null
+      owner = key
       active = new AbortController()
       return active
     },
     finish(attempt) {
       if (active === attempt) active = undefined
     },
-    cancel() {
-      active?.abort()
+    cancel(key) {
+      if (!active || (key !== undefined && key !== owner)) return false
+      active.abort()
       active = undefined
+      return true
     },
   }
 }
