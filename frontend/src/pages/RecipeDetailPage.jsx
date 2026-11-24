@@ -1,6 +1,8 @@
 import { useCallback, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { DishIllustration } from '../components/RecipeCard.jsx'
+import FavoriteButton from '../components/FavoriteButton.jsx'
+import FavoritesStatus from '../components/FavoritesStatus.jsx'
 import RecipePreparation from '../components/RecipePreparation.jsx'
 import RequestError from '../components/RequestError.jsx'
 import ServingsCalculator from '../components/ServingsCalculator.jsx'
@@ -71,6 +73,8 @@ export default function RecipeDetailPage() {
           {recipe.categorias.length > 0 && (
             <p className="detail-meta">Categorías: {recipe.categorias.map(({ nombre }) => nombre).join(', ')}</p>
           )}
+          <FavoritesStatus />
+          <FavoriteButton recipe={recipe} />
         </section>
       </div>
 

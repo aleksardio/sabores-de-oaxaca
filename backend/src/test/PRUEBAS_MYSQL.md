@@ -60,3 +60,16 @@ Con otro esquema dedicado y vacío, y las mismas variables `MYSQL_IT_*`:
 ```
 
 La prueba aplica V1–V6, valida los mapeos con Hibernate y carga datos ficticios en ese esquema. No reutilizarlo para otras suites; no se ejecuta Flyway clean.
+
+## Favoritos por HTTP y MySQL
+
+Con otro esquema dedicado, autorizado y vacío, y las mismas variables `MYSQL_IT_*`:
+
+```powershell
+.\mvnw.cmd '-Dfavoritos.mysql.it=true' '-Dtest=FavoritosMySqlTest' test
+```
+
+La prueba verifica el esquema vacío y ejecuta Flyway y Hibernate en `dev`.
+Usa JWT reales de cuentas ficticias, verifica altas HTTP concurrentes y comprueba
+las asociaciones y su visibilidad directamente con MySQL. No reutiliza ni limpia
+el esquema; para repetir la suite se necesita otro vacío.
