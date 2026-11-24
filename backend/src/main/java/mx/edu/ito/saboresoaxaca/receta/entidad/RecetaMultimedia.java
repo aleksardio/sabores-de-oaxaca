@@ -13,6 +13,9 @@ public class RecetaMultimedia {
     @Column(nullable = false, columnDefinition = "INT UNSIGNED") private Integer orden;
     @Column(name = "creado_en", nullable = false, columnDefinition = "DATETIME(6)") private LocalDateTime creadoEn;
     protected RecetaMultimedia() { }
+    public RecetaMultimedia(Receta receta, String tipo, String url, String textoAlternativo, Integer orden, LocalDateTime creadoEn) {
+        this.receta = receta; this.tipo = tipo; this.url = url; this.textoAlternativo = textoAlternativo; this.orden = orden; this.creadoEn = creadoEn;
+    }
     public Long getId() { return id; }
     public Receta getReceta() { return receta; }
     public String getTipo() { return tipo; }
