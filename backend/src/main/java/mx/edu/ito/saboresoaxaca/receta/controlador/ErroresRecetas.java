@@ -7,7 +7,7 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import org.springframework.web.server.ResponseStatusException;
 import java.util.Map;
 
-@RestControllerAdvice(assignableTypes = {RecetasPublicasControlador.class, ConsultaRecetasPropiasControlador.class})
+@RestControllerAdvice(assignableTypes = {RecetasPublicasControlador.class, ConsultaRecetasPropiasControlador.class, ModeracionControlador.class})
 public class ErroresRecetas {
     @ExceptionHandler(ResponseStatusException.class)
     ResponseEntity<Map<String, String>> estado(ResponseStatusException error) {
