@@ -18,3 +18,5 @@ export const ingredientUnits = {
   TAZA: 'taza(s)',
   AL_GUSTO: 'Al gusto',
 }
+
+export const mediaTypes = { IMAGEN: 'Imagen', VIDEO: 'Video' }

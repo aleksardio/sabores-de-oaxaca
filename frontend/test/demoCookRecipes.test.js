@@ -2,7 +2,6 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { demoCookRecipes, findDemoCookRecipe, isDemoRecipeEditable, recipeStates } from '../src/data/demoCookRecipes.js'
 import { recipes } from '../src/data/recipes.js'
-import { validateRecipeForReview } from '../src/utils/recipeEditorValidation.js'
 
 test('solo BORRADOR y RECHAZADA permiten edición en memoria', () => {
   assert.equal(isDemoRecipeEditable('BORRADOR'), true)
@@ -23,6 +22,5 @@ test('los ejemplos cubren los cinco estados y son independientes del catálogo p
   assert.equal(new Set(demoCookRecipes.map(({ id }) => id)).size, demoCookRecipes.length)
   for (const example of demoCookRecipes) {
     assert.ok(!recipes.some(({ id }) => id === example.id))
-    assert.deepEqual(validateRecipeForReview(example), {}, example.id)
   }
 })

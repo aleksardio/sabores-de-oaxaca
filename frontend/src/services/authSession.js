@@ -87,7 +87,9 @@ export function createAuthSession() {
   async function requestAuthenticated(user, path, options) {
     if (!token || snapshot.user !== user) throw new ApiError(401, expired)
     try {
-      return await apiRequest(path, { ...options, token })
+      const result = await apiRequest(path, { ...options, token })
+      if (snapshot.user !== user) throw new DOMException('La sesión cambió.', 'AbortError')
+      return result
     } catch (error) {
       // Un 401 tardío de una sesión anterior no debe cerrar la sesión actual.
       if (error instanceof ApiError && error.status === 401 && snapshot.user === user) {

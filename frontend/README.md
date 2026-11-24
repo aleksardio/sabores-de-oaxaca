@@ -7,8 +7,9 @@ Las composiciones de tablet y móvil son adaptaciones del escritorio.
 Las ilustraciones se recrean con CSS y las fuentes Fraunces e Inter se cargan
 desde Google Fonts.
 Inicio, el catálogo y el detalle consultan la API pública. El registro, el
-inicio de sesión y el perfil propio también requieren el backend. Los
-paneles de demostración conservan sus propios datos locales.
+inicio de sesión, el perfil, los favoritos y el panel del cocinero también
+requieren el backend. Moderación, reportes y administración siguen siendo
+demostraciones con datos locales.
 
 ## Instalar y ejecutar
 
@@ -72,70 +73,61 @@ que la sesión no es válida. Un 403 es falta de autorización, no un 401.
 Prueba también recargar directamente un detalle y navegar con una ventana
 estrecha: el menú debe ajustarse y las tarjetas deben reorganizarse.
 
-«Compartir receta» y «Compartir mi receta» siguen deshabilitados hasta contar
-con la integración de publicación. El pie público ofrece un enlace separado
-para **Ver demostración del panel**.
+### Panel del cocinero
 
-### Panel del cocinero (demostración visual)
+**Mis recetas** está en el perfil y en el pie público. **Compartir receta**,
+en la barra de navegación, abre el formulario solo con `COCINERO`.
+`/cocinero` lleva a `/cocinero/recetas`. Sin sesión, se pide iniciar sesión
+con retorno a un destino interno permitido. Cualquier cuenta autenticada puede
+consultar sus propias recetas. `ADMIN` no implica `COCINERO`: sin el rol de
+cocinero solo se permite lectura. Spring Boot decide el acceso definitivo.
+Un `401` invalida la sesión local; un `403` muestra acceso denegado sin cerrarla.
+El JWT solo vive en memoria.
 
-| Ruta | Qué muestra |
+| Endpoint bajo `/api/v1` | Operación |
 | --- | --- |
-| `/cocinero` | Redirige a «Mis recetas». |
-| `/cocinero/recetas` | Cinco ejemplos, resumen por estado y filtros locales por estado y título. |
-| `/cocinero/recetas/nueva` | Formulario vacío, verificación de requisitos y vista previa en la misma pantalla. |
-| `/cocinero/recetas/:id/editar` | Editor en memoria si el estado lo permite; en los demás estados abre en modo lectura. |
-| `/cocinero/recetas/:id/vista-previa` | Vista previa del ejemplo original. Si el ID no existe, muestra «Receta no encontrada». |
+| `GET /mis-recetas?pagina=0&tamano=12` | Listado paginado por el servidor y total global. Filtros y conteos por estado solo para la página actual. |
+| `GET /mis-recetas/{id}` | Consulta el detalle propio, incluidas las bajas, antes de editar o previsualizar. |
+| `POST /mis-recetas` | Crea un borrador sin enviar versión, autor ni estado. Tras `201` abre su editor. |
+| `PUT /mis-recetas/{id}` | Reemplaza el contenido completo, con `version` en el JSON. Solo `BORRADOR` y `RECHAZADA` activas. Conserva la nueva versión del `200`. |
+| `POST /mis-recetas/{id}/enviar-revision` | Solo borrador activo y completo. Si hay cambios locales, los guarda primero. Envía `If-Match: "versión"` (p. ej. `"0"`), sin cuerpo. El `200` devuelve la nueva versión y `PENDIENTE`, no `PUBLICADA`. |
+| `DELETE /mis-recetas/{id}` | Confirma explícitamente y envía `If-Match` entre comillas, sin cuerpo. Tras `204` vuelve a consultar el detalle. La baja no cambia el estado editorial y no se puede restaurar desde aquí. |
+| `GET /categorias` | Carga el catálogo con el servicio público existente, sin Bearer. |
 
-Los ejemplos de `src/data/demoCookRecipes.js` cubren `BORRADOR`, `PENDIENTE`,
-`PUBLICADA`, `RECHAZADA` y `ARCHIVADA`. No son las recetas del catálogo público
-ni pertenecen a cuentas o autores de demostración. Las categorías de
-`src/data/recipeEditorOptions.js` son opciones locales de demostración, no
-una consulta a MySQL. Las rutas no están protegidas ni asignan roles.
+Contrato: [RECETAS_COCINERO_API.md](../backend/docs/RECETAS_COCINERO_API.md).
+El borrador permite guardar sin categorías, ingredientes ni multimedia.
+Para revisión se requiere al menos una categoría y un ingrediente. Multimedia
+solo admite referencias HTTPS (`IMAGEN` o `VIDEO`), sin subida de archivos.
+El editor conserva los IDs, nombres y cantidades base del detalle y vuelve
+a enviar las asociaciones completas al guardar.
 
-Puedes editar en memoria ejemplos en `BORRADOR` y practicar correcciones en
-`RECHAZADA`, sin reabrirlo ni cambiar su estado. `PENDIENTE` queda en lectura
-durante la revisión; `PUBLICADA` requiere retiro a `BORRADOR` en el servidor;
-`ARCHIVADA` requiere que moderación la restaure a `PENDIENTE` para revisar de
-nuevo. Guardar y enviar a revisión están deshabilitados. El formulario conserva
-los cambios al alternar con la vista previa, pero los descarta al salir o
-recargar. No usa almacenamiento del navegador ni API, y nada se publica o
-agrega al catálogo.
+- **Ingredientes:** no existe un endpoint de catálogo documentado. Hasta
+  que haya un contrato oficial, introduce el ID numérico de un ingrediente
+  existente proporcionado por **Aleks**. El servidor valida si existe. No
+  hay IDs predeterminados ni se consulta `/ingredientes`.
+- **Aviso para Aleks — recetas rechazadas:** editar no cambia `RECHAZADA`
+  a `BORRADOR` y el contrato actual no permite reenviarlas. No se simula una
+  transición ni se habilita un botón de reenvío.
+- **Conflictos (`409`):** se conservan los cambios en el editor. Consulta el
+  detalle del servidor, compara ambas versiones y elige qué datos usar.
+  Adoptar la versión no escribe ni reintenta; si aún se puede editar,
+  guarda de nuevo explícitamente. Salir de la pantalla, cerrar sesión o
+  recargar descarta los cambios que no se hayan guardado.
+- **Diseño:** se mantiene la composición de los frames 09–12 de Figma:
+  barra lateral, tarjetas de resumen, tabla, formulario y vista previa.
+  En móvil la navegación pasa arriba y la tabla se apila.
 
-**Figma:** se revisaron los frames 09 «Mis recetas», 10 «Publicar receta», 11
-«Previsualización» y 12 «Editar receta». Se conservan la barra lateral café,
-el fondo crema, las tarjetas de resumen, la tabla y la ilustración de la
-vista previa. En móvil la navegación pasa arriba y la tabla se apila.
-Se omitieron la cuenta, las notificaciones, los controles de sesión y las
-cargas multimedia; se reemplazaron las métricas del prototipo por conteos
-locales reales de los ejemplos. Los campos siguen el modelo de datos: tipo
-y categorías separados, preparación por líneas y filas editables de ingredientes.
-
-**Pruebas manuales:**
-
-- Entra desde el pie público, filtra cada estado y añade una búsqueda que no
-  coincida. Limpia los filtros y prueba el enlace de regreso al sitio público.
-- Abre **Nueva receta**, comprueba los requisitos con campos vacíos y verifica
-  que el foco vaya a **Título**. Añade y quita ingredientes; prueba una cantidad
-  negativa y cambia la unidad a **Al gusto** (la cantidad debe vaciarse).
-  Completa los campos, comprueba de nuevo y revisa que guardar y enviar sigan
-  deshabilitados. Alterna con **Vista previa** y comprueba que los datos siguen
-  en el formulario.
-- Edita `demo-tostadas-calabaza` y recarga: debe restaurarse el título original.
-  Abre `demo-dulce-amaranto` para practicar correcciones. Comprueba el modo
-  lectura de `demo-infusion-guayaba`, `demo-quesadillas-flor` y
-  `demo-caldo-garbanzos`, incluso al entrar por `/editar`. Prueba el ID
-  `no-existe` en edición y vista previa.
-- Revisa listado, creación, edición y vista previa a **320, 390, 768 y 1440 px**;
-  las filas de ingredientes deben adaptarse sin desplazamiento horizontal.
-  Comprueba por teclado el foco y la validación, y abre las rutas públicas y
-  de autenticación para confirmar que siguen funcionando.
-
-**Integración con Aleks:** conectar sesión y permisos reales (cuenta activa,
-rol y propiedad verificados por el servidor), catálogos e identificadores
-reales, listado y lectura de recetas propias, guardado, envío y transiciones
-editoriales. Falta acordar el contrato de API, el manejo de errores y la
-integración de multimedia. El servidor deberá validar todos los campos y
-asignar el autor; la comprobación local no reemplaza esa validación.
+**Verificación:** `npm test` simula `fetch` para comprobar listado, detalle,
+creación, edición, baja, revisión, versiones, roles, validación, errores,
+cancelación y bloqueo de envíos duplicados. En Chromium con HTTP simulado
+se probaron listado, detalle, edición, creación y comparación `409` a
+320, 390, 768 y 1440 px sin desplazamiento horizontal; también el retorno
+de login, el modo de solo lectura, el recetario y agregar/quitar favoritos.
+Queda pendiente el flujo de
+extremo a extremo contra Spring Boot + MySQL con cuentas autorizadas:
+probar un `COCINERO`, una cuenta sin ese rol (o `ADMIN` sin `COCINERO`),
+IDs de categorías e ingredientes provistos en ese entorno, paginación,
+concurrencia real y consistencia de la baja con el catálogo público.
 
 ### Panel de moderación (demostración visual)
 
@@ -221,8 +213,7 @@ panel del moderador, sin duplicar las pantallas de revisión y reportes.
 Los archivos `src/data/demoAdminUsers.js`, `src/data/demoAdminRecipes.js` y
 `src/data/demoAdminCatalogs.js` contienen siete cuentas, seis recetas
 administrativas, seis categorías y ocho ingredientes ficticios. Las recetas
-no son las del sitio público ni las de los paneles anteriores. Los nombres de
-las categorías coinciden con las opciones locales del cocinero. Las ocho
+no son las del sitio público ni las de los otros paneles. Las ocho
 regiones siguen siendo datos locales del frontend y no se presentan como un
 catálogo de MySQL.
 
@@ -374,10 +365,8 @@ El JWT se mantiene exclusivamente en memoria. Recargar por completo, cerrar
 la pestaña o abrir otra pestaña requiere iniciar sesión otra vez. La sesión
 local caduca según `expiraEnSegundos` (1800 por defecto); no hay refresh
 tokens. Salir localmente o recargar no equivale a revocar tokens en el
-servidor. Los paneles de cocinero, moderación y administración siguen siendo
-demostraciones sin protección ni operaciones de negocio reales. Con Aleks
-queda por acordar cómo preparar cuentas de prueba con los distintos roles
-antes de conectar permisos y proteger esos paneles.
+servidor. Moderación y administración siguen siendo demostraciones sin
+protección ni operaciones de negocio reales.
 
 `npm test` simula HTTP sin llamar al backend: cubre los estados de los
 cuatro endpoints, errores de campo y red, carga de roles, cancelación, expiración,
@@ -428,13 +417,11 @@ Sin imagen (URL ausente, `*.invalid`, video o carga fallida) se muestra
 `DishIllustration`. No se reproducen videos. La preparación se muestra como
 texto, sin HTML, y puede estar vacía.
 
-Los tres paneles conservan `demoCookRecipes`, `recipeEditorOptions`,
-`demoModerationRecipes`, `demoModerationReports`, `demoAdminUsers`,
-`demoAdminRecipes` y `demoAdminCatalogs`. `demoAuthors` sigue alimentando el
-directorio ficticio; Favoritos aún no guarda recetas. `src/data/recipes.js`
-y `src/utils/servings.js` se conservan exclusivamente para las pruebas
-históricas de porciones y la comprobación de independencia del panel del
-cocinero. No son datos alternativos si falla la API.
+Moderación y administración conservan `demoModerationRecipes`,
+`demoModerationReports`, `demoAdminUsers`, `demoAdminRecipes` y
+`demoAdminCatalogs`. `demoAuthors` sigue alimentando el directorio ficticio.
+`demoCookRecipes`, `src/data/recipes.js` y `src/utils/servings.js` se
+conservan para pruebas históricas y no son datos alternativos si falla la API.
 
 **Verificación:** `npm test` simula `fetch` y comprueba URLs, paginación,
 categorías, detalles, porciones, errores, cancelación y ausencia de Bearer.
@@ -450,7 +437,7 @@ y otro de más de seis recetas, categorías múltiples, 404 y cantidades ajustad
 ## Comprobaciones locales
 
 ```sh
-npm test         # Autenticación y recetas públicas con HTTP simulado; paneles de demostración
+npm test         # Autenticación, favoritos, recetario y panel de cocinero con HTTP simulado
 npm run build    # Genera dist/
 npm run lint     # Revisa el código con ESLint
 npm run preview  # Sirve la compilación localmente después de build
