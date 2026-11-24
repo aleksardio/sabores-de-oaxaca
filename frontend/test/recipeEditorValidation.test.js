@@ -1,76 +1,67 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { changeIngredientUnit, validateRecipeForReview } from '../src/utils/recipeEditorValidation.js'
+import { blankDraft, changeIngredientUnit, validateRecipeDraft, validateRecipeForReview } from '../src/utils/recipeEditorValidation.js'
 
-const ingredient = { id: 1, name: 'Maíz  molido', quantity: '0.125', unit: 'KG', note: '' }
-const completeRecipe = {
-  title: 'Receta de prueba',
-  description: 'Ejemplo de validación.',
-  preparation: 'Mezclar los ingredientes.',
-  type: 'COMUN',
-  baseServings: '2',
-  categories: ['Antojitos'],
-  ingredients: [ingredient],
+const ingredient = { id: 'row', ingredientId: '21', quantity: '0.125', unit: 'KG', note: '', order: '1' }
+const media = { id: 'row', type: 'IMAGEN', url: 'https://ejemplo.invalid/img.jpg', alt: '', order: '1' }
+const draft = {
+  ...blankDraft, title: 'Salsa', description: 'Casera', preparation: 'Mezclar.', type: 'COMUN', baseServings: '2',
 }
+const record = { estado: 'BORRADOR', eliminadoEn: null }
+const check = (fields) => validateRecipeDraft({ ...draft, ...fields })
 
-const check = (fields) => validateRecipeForReview({ ...completeRecipe, ...fields })
-const checkIngredient = (fields) => check({ ingredients: [{ ...ingredient, ...fields }] })
-
-test('comprueba el título vacío, de solo espacios y el límite de 200 caracteres', () => {
-  for (const title of ['', '  ', 'a'.repeat(201)]) assert.ok(check({ title }).title)
-  assert.deepEqual(check({ title: 'a'.repeat(200) }), {})
+test('guarda borrador con arreglos vacíos pero exige categoría, ingrediente y estado activo para revisión', () => {
+  assert.deepEqual(check({}), {})
+  assert.deepEqual(Object.keys(validateRecipeForReview(draft, record)).sort(), ['categories', 'ingredients'])
+  const complete = { ...draft, categories: [{ id: 14 }], ingredients: [ingredient] }
+  assert.deepEqual(validateRecipeForReview(complete, record), {})
+  assert.ok(validateRecipeForReview(complete, { ...record, estado: 'RECHAZADA' }).state)
+  assert.ok(validateRecipeForReview(complete, { ...record, eliminadoEn: '2026-11-23' }).state)
+  for (const key of ['categories', 'ingredients', 'multimedia']) assert.ok(check({ [key]: undefined })[key])
 })
 
-test('descripción, preparación y tipo son obligatorios para revisar', () => {
-  const errors = check({ description: ' ', preparation: '', type: 'Antojitos' })
-  assert.deepEqual(Object.keys(errors).sort(), ['description', 'preparation', 'type'])
-  assert.deepEqual(check({ type: 'TRADICIONAL_OAXAQUENA' }), {})
+test('valida campos requeridos, tipo, título y porciones hasta Integer.MAX_VALUE', () => {
+  assert.deepEqual(Object.keys(check({ title: ' ', description: '', preparation: ' ', type: 'MOLE' })), ['title', 'description', 'preparation', 'type'])
+  assert.ok(check({ title: 'a'.repeat(201) }).title)
+  assert.deepEqual(check({ title: 'a'.repeat(200), baseServings: '2147483647', type: 'TRADICIONAL_OAXAQUENA' }), {})
+  for (const value of ['', '0', '-1', '1.5', '1e2', '2147483648']) assert.ok(check({ baseServings: value }).baseServings)
 })
 
-test('acepta solo porciones enteras positivas que caben en INT UNSIGNED', () => {
-  for (const baseServings of ['', '0', '-1', '1.5', '1e2', 'NaN', '4294967296']) {
-    assert.ok(check({ baseServings }).baseServings, baseServings)
-  }
-  assert.deepEqual(check({ baseServings: '4294967295' }), {})
-})
-
-test('requiere ingredientes y que todas las filas estén completas', () => {
-  assert.ok(check({ ingredients: [] }).ingredients)
-  const errors = check({ ingredients: [ingredient, { id: 2, name: ' ', quantity: '', unit: 'G', note: '' }] })
-  assert.ok(errors['ingredient-2-name'])
-  assert.ok(errors['ingredient-2-quantity'])
-  assert.ok(checkIngredient({ unit: 'PIZCA' })['ingredient-1-unit'])
-  assert.ok(checkIngredient({ note: 'a'.repeat(256) })['ingredient-1-note'])
-})
-
-test('cantidad numérica positiva con precisión DECIMAL(12,3) sin conversiones flotantes', () => {
+test('valida precisión de cantidades, unidad, nota y transición a Al gusto', () => {
+  const row = (fields) => check({ ingredients: [{ ...ingredient, ...fields }] })
   for (const quantity of ['', '0', '0.000', '-1', 'NaN', '1e3', '1.0001', '1000000000', '1,2.3']) {
-    assert.ok(checkIngredient({ quantity })['ingredient-1-quantity'], quantity)
+    assert.ok(row({ quantity })['ingredient-row-quantity'], quantity)
   }
-  for (const quantity of ['1', '0,001', '999999999.999']) {
-    assert.deepEqual(checkIngredient({ quantity }), {})
-  }
-})
-
-test('AL_GUSTO descarta la cantidad anterior, exige null y permite volver a una unidad numérica vacía', () => {
+  for (const quantity of ['1', '0,001', '999999999.999']) assert.deepEqual(row({ quantity }), {})
+  assert.ok(row({ unit: 'PIZCA' })['ingredient-row-unit'])
+  assert.ok(row({ unit: 'AL_GUSTO', quantity: '' })['ingredient-row-unit'])
+  assert.ok(row({ note: 'a'.repeat(256) })['ingredient-row-note'])
   const toTaste = changeIngredientUnit(ingredient, 'AL_GUSTO')
   assert.equal(toTaste.quantity, null)
-  assert.equal(ingredient.quantity, '0.125')
-  assert.deepEqual(check({ ingredients: [toTaste] }), {})
-  assert.ok(checkIngredient({ unit: 'AL_GUSTO', quantity: '' })['ingredient-1-unit'])
-  assert.ok(checkIngredient({ unit: 'AL_GUSTO', quantity: '1' })['ingredient-1-unit'])
-  const numeric = changeIngredientUnit(toTaste, 'G')
-  assert.equal(numeric.quantity, '')
-  assert.ok(check({ ingredients: [numeric] })['ingredient-1-quantity'])
+  assert.deepEqual(row(toTaste), {})
+  assert.equal(changeIngredientUnit(toTaste, 'G').quantity, '')
 })
 
-test('detecta duplicados aunque difieran los espacios, mayúsculas, acentos o unidades', () => {
-  const errors = check({ ingredients: [ingredient, { ...ingredient, id: 2, name: '  MAIZ molido ', unit: 'G' }] })
-  assert.match(errors['ingredient-2-name'], /ya está/)
+test('valida referencias positivas, duplicados, órdenes y límites de las colecciones', () => {
+  assert.ok(check({ categories: [{ id: 2 }, { id: '02' }] }).categories)
+  assert.ok(check({ categories: [{ id: 0 }] }).categories)
+  assert.ok(check({ categories: Array.from({ length: 101 }, (_, i) => ({ id: i + 1 })) }).categories)
+  const errors = check({ ingredients: [ingredient, { ...ingredient, id: 'dup', ingredientId: '021' }],
+    multimedia: [media, { ...media, id: 'dup' }] })
+  for (const key of ['ingredient-dup-ingredientId', 'ingredient-dup-order', 'media-dup-order']) assert.match(errors[key], /repetido/)
+  assert.ok(check({ ingredients: [{ ...ingredient, ingredientId: '' }] })['ingredient-row-ingredientId'])
+  assert.ok(check({ ingredients: Array(501).fill(ingredient) }).ingredients)
+  assert.ok(check({ multimedia: Array(101).fill(media) }).multimedia)
+  assert.ok(check({ multimedia: [{ ...media, order: '2147483648' }] })['media-row-order'])
 })
 
-test('requiere al menos una categoría de demostración, independiente del tipo', () => {
-  assert.ok(check({ categories: [] }).categories)
-  assert.ok(check({ categories: ['COMUN'] }).categories)
-  assert.deepEqual(check({ categories: ['Antojitos', 'Dulces'] }), {})
+test('multimedia solo admite Imagen o Video con URL HTTPS válida y texto alternativo acotado', () => {
+  const item = (fields) => check({ multimedia: [{ ...media, ...fields }] })
+  for (const url of ['http://ejemplo.invalid', 'javascript:alert(1)', 'https:///fake.com', 'https://a@fake.com',
+    'https://bad_host.invalid', 'https://fake.com/%xx', 'https://fake.com/not an image', `https://fake.com/${'a'.repeat(2048)}`]) {
+    assert.ok(item({ url })['media-row-url'], url)
+  }
+  assert.deepEqual(item({ type: 'VIDEO', url: 'https://ejemplo.invalid:443/video?q=uno%20dos' }), {})
+  assert.ok(item({ type: 'AUDIO' })['media-row-type'])
+  assert.ok(item({ alt: 'a'.repeat(256) })['media-row-alt'])
 })

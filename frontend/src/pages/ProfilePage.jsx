@@ -53,7 +53,10 @@ export default function ProfilePage() {
             </div>
           </dl>
           <p>Cerrar sesión revoca las sesiones de tu cuenta en todos los dispositivos.</p>
-          <LogoutButton />
+          <div className="community-actions">
+            <Link className="site-button site-button--green" to="/cocinero/recetas">Mis recetas</Link>
+            <LogoutButton />
+          </div>
         </section>
       )}
     </section>

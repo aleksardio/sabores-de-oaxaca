@@ -1,4 +1,10 @@
-import { demoRecipeCategories, ingredientUnits, recipeTypes } from '../data/recipeEditorOptions.js'
+import { ingredientUnits, mediaTypes, recipeTypes } from '../data/recipeEditorOptions.js'
+
+export const maxItems = { categories: 100, ingredients: 500, multimedia: 100 }
+export const blankDraft = {
+  title: '', description: '', preparation: '', type: '', baseServings: '',
+  categories: [], ingredients: [], multimedia: [],
+}
 
 export function normalizeRecipeText(text) {
   return text.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().trim().replace(/\s+/g, ' ')
@@ -8,45 +14,108 @@ export function changeIngredientUnit(ingredient, unit) {
   return { ...ingredient, unit, quantity: unit === 'AL_GUSTO' ? null : ingredient.quantity ?? '' }
 }
 
-function isPositiveDecimal(quantity) {
-  return typeof quantity === 'string'
-    && /^\d{1,9}(?:[.,]\d{1,3})?$/.test(quantity)
-    && /[1-9]/.test(quantity)
+export const positiveInteger = (value, max = Number.MAX_SAFE_INTEGER) =>
+  /^\d+$/.test(value) && Number(value) > 0 && Number(value) <= max
+
+export function isHttpsMediaUrl(value) {
+  if (typeof value !== 'string' || value.length > 2048 || !/^https:\/\/[^/\\]/.test(value)
+    || /[\s\\<>"{}|^`]|%(?![\da-f]{2})/iu.test(value)) return false
+  try {
+    const host = value.slice(8).split(/[/?#]/u, 1)[0]
+    const url = new URL(value)
+    return !host.includes('@') && (host.startsWith('[') || /^[a-z\d.-]+(?::\d+)?$/i.test(host))
+      && (url.hostname.startsWith('[') || url.hostname.replace(/\.$/, '').split('.').every(
+        (label) => /^[a-z\d](?:[a-z\d-]*[a-z\d])?$/i.test(label),
+      ))
+  } catch {
+    return false
+  }
 }
 
-// The editor keeps raw text (including incomplete values). These checks are
-// only for readiness; they do not modify the draft or prepare a server request.
-export function validateRecipeForReview(recipe) {
+export function validateRecipeDraft(recipe) {
   const errors = {}
-  if (!recipe.title.trim()) errors.title = 'Escribe el título de la receta.'
-  else if (recipe.title.length > 200) errors.title = 'El título debe tener como máximo 200 caracteres.'
-  if (!recipe.description.trim()) errors.description = 'Escribe una descripción.'
+  for (const [field, label, limit] of [
+    ['title', 'el título', 200], ['description', 'la descripción', 65535], ['preparation', 'la preparación', 16777215],
+  ]) {
+    if (!recipe[field].trim()) errors[field] = `Escribe ${label} de la receta.`
+    else if (recipe[field].length > limit) errors[field] = `El límite es de ${limit} caracteres.`
+  }
   if (!Object.hasOwn(recipeTypes, recipe.type)) errors.type = 'Selecciona un tipo de receta.'
-  if (!/^\d+$/.test(recipe.baseServings) || Number(recipe.baseServings) < 1 || Number(recipe.baseServings) > 4294967295) {
-    errors.baseServings = 'Escribe un entero entre 1 y 4 294 967 295.'
-  }
-  if (!recipe.categories.length || !recipe.categories.every((category) => demoRecipeCategories.includes(category))) {
-    errors.categories = 'Selecciona al menos una categoría de la lista.'
-  }
-  if (!recipe.ingredients.length) errors.ingredients = 'Agrega al menos un ingrediente.'
+  const javaIntMax = 2147483647
+  if (!positiveInteger(recipe.baseServings, javaIntMax)) errors.baseServings = 'Escribe un entero entre 1 y 2 147 483 647.'
 
-  const names = new Set()
-  recipe.ingredients.forEach((ingredient) => {
-    const { id, name, unit, quantity, note } = ingredient
-    const normalized = normalizeRecipeText(name)
-    if (!normalized) errors[`ingredient-${id}-name`] = 'Escribe el nombre del ingrediente.'
-    else if (name.length > 150) errors[`ingredient-${id}-name`] = 'El nombre debe tener como máximo 150 caracteres.'
-    else if (names.has(normalized)) errors[`ingredient-${id}-name`] = 'Este ingrediente ya está en la receta.'
-    if (normalized) names.add(normalized)
+  for (const [field, limit] of Object.entries(maxItems)) {
+    if (!Array.isArray(recipe[field]) || recipe[field].length > limit) errors[field] = `Se requiere una lista de hasta ${limit} elementos.`
+  }
+  if (Array.isArray(recipe.categories) && (!recipe.categories.every(({ id }) => positiveInteger(id))
+    || new Set(recipe.categories.map(({ id }) => Number(id))).size !== recipe.categories.length)) {
+    errors.categories = 'Las categorías deben tener IDs positivos y distintos.'
+  }
 
-    if (!Object.hasOwn(ingredientUnits, unit)) errors[`ingredient-${id}-unit`] = 'Selecciona una unidad válida.'
-    else if (unit === 'AL_GUSTO' && quantity !== null) errors[`ingredient-${id}-unit`] = '«Al gusto» requiere una cantidad vacía.'
-    else if (unit !== 'AL_GUSTO' && !isPositiveDecimal(quantity)) {
-      errors[`ingredient-${id}-quantity`] = 'Escribe una cantidad mayor que cero, con hasta 9 dígitos enteros y 3 decimales.'
+  function uniquePositive(value, seen, key, label, max) {
+    if (!positiveInteger(value, max)) errors[key] = `${label}: escribe un entero positivo válido.`
+    else if (seen.has(Number(value))) errors[key] = `${label} repetido.`
+    else seen.add(Number(value))
+  }
+
+  const ids = new Set()
+  const ingredientOrders = new Set()
+  if (Array.isArray(recipe.ingredients)) recipe.ingredients.forEach(({ id, ingredientId, unit, quantity, note, order }) => {
+    const prefix = `ingredient-${id}`
+    uniquePositive(ingredientId, ids, `${prefix}-ingredientId`, 'ID de ingrediente')
+    uniquePositive(order, ingredientOrders, `${prefix}-order`, 'Orden', javaIntMax)
+    if (!Object.hasOwn(ingredientUnits, unit)) errors[`${prefix}-unit`] = 'Selecciona una unidad válida.'
+    else if (unit === 'AL_GUSTO' && quantity !== null) errors[`${prefix}-unit`] = 'Al gusto requiere cantidad nula.'
+    else if (unit !== 'AL_GUSTO' && (!/^\d{1,9}(?:[.,]\d{1,3})?$/.test(quantity) || !/[1-9]/.test(quantity))) {
+      errors[`${prefix}-quantity`] = 'Escribe una cantidad positiva de hasta 9 dígitos enteros y 3 decimales.'
     }
-    if (note.length > 255) errors[`ingredient-${id}-note`] = 'La nota debe tener como máximo 255 caracteres.'
+    if (note.length > 255) errors[`${prefix}-note`] = 'La nota admite hasta 255 caracteres.'
   })
 
-  if (!recipe.preparation.trim()) errors.preparation = 'Escribe la preparación.'
+  const mediaOrders = new Set()
+  if (Array.isArray(recipe.multimedia)) recipe.multimedia.forEach(({ id, type, url, alt, order }) => {
+    const prefix = `media-${id}`
+    uniquePositive(order, mediaOrders, `${prefix}-order`, 'Orden', javaIntMax)
+    if (!Object.hasOwn(mediaTypes, type)) errors[`${prefix}-type`] = 'Selecciona Imagen o Video.'
+    if (!isHttpsMediaUrl(url)) errors[`${prefix}-url`] = 'Escribe una URL HTTPS válida de hasta 2048 caracteres, sin credenciales.'
+    if (alt.length > 255) errors[`${prefix}-alt`] = 'El texto alternativo admite hasta 255 caracteres.'
+  })
   return errors
+}
+
+export function validateRecipeForReview(recipe, record) {
+  const errors = validateRecipeDraft(recipe)
+  if (record?.estado !== 'BORRADOR' || record.eliminadoEn !== null) errors.state = 'Solo se puede enviar un borrador activo.'
+  if (!recipe.categories?.length) errors.categories ??= 'Selecciona al menos una categoría.'
+  if (!recipe.ingredients?.length) errors.ingredients ??= 'Agrega al menos un ingrediente.'
+  return errors
+}
+
+export function draftFromDetail(recipe) {
+  return {
+    title: recipe.titulo, description: recipe.descripcion, preparation: recipe.preparacion,
+    type: recipe.tipo, baseServings: String(recipe.porcionesBase),
+    categories: recipe.categorias,
+    ingredients: recipe.ingredientes.map((row) => ({
+      id: row.id, ingredientId: String(row.id), name: row.nombre, quantity: row.cantidadBase === null ? null : String(row.cantidadBase),
+      unit: row.unidad, note: row.nota ?? '', order: String(row.orden),
+    })),
+    multimedia: recipe.multimedia.map((row) => ({
+      id: row.id, type: row.tipo, url: row.url ?? '', alt: row.textoAlternativo ?? '', order: String(row.orden),
+    })),
+  }
+}
+
+export function toRecipeBody(draft) {
+  return {
+    titulo: draft.title, descripcion: draft.description, preparacion: draft.preparation, tipo: draft.type,
+    porcionesBase: Number(draft.baseServings), categorias: draft.categories.map(({ id }) => Number(id)),
+    ingredientes: draft.ingredients.map((row) => ({
+      ingredienteId: Number(row.ingredientId), cantidad: row.quantity === null ? null : Number(String(row.quantity).replace(',', '.')),
+      unidad: row.unit, orden: Number(row.order), nota: row.note || null,
+    })),
+    multimedia: draft.multimedia.map((row) => ({
+      tipo: row.type, url: row.url, textoAlternativo: row.alt || null, orden: Number(row.order),
+    })),
+  }
 }

@@ -19,10 +19,11 @@ export class ApiError extends Error {
   }
 }
 
-export async function apiRequest(path, { method = 'GET', body, token, signal, errors, expected = 200 } = {}) {
+export async function apiRequest(path, { method = 'GET', body, token, signal, errors, expected = 200, ifMatch } = {}) {
   const headers = { Accept: 'application/json' }
   if (body !== undefined) headers['Content-Type'] = 'application/json'
   if (token) headers.Authorization = `Bearer ${token}`
+  if (ifMatch !== undefined) headers['If-Match'] = ifMatch
 
   let response
   try {

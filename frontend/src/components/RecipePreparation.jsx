@@ -1,9 +1,9 @@
-export default function RecipePreparation({ preparation }) {
+export default function RecipePreparation({ preparation, titleId = 'detail-preparation-title' }) {
   const steps = (preparation ?? '').split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
 
   return (
-    <section className="detail-panel detail-preparation" aria-labelledby="detail-preparation-title">
-      <h2 id="detail-preparation-title">Preparación paso a paso</h2>
+    <section className="detail-panel detail-preparation" aria-labelledby={titleId}>
+      <h2 id={titleId}>Preparación paso a paso</h2>
       {steps.length > 0 ? (
         <ol className="detail-steps" role="list">
           {steps.map((step, index) => (
