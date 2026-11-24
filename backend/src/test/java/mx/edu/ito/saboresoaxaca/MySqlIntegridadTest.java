@@ -117,7 +117,7 @@ class MySqlIntegridadTest {
         try (Statement s = db.createStatement(); ResultSet r = s.executeQuery("SELECT version, success FROM flyway_schema_history WHERE version IS NOT NULL")) {
             Set<String> versiones = new HashSet<>();
             while (r.next()) { assertTrue(r.getBoolean(2)); assertTrue(versiones.add(r.getString(1))); }
-            assertEquals(Set.of("1", "2", "3", "4", "5", "6"), versiones);
+            assertEquals(Set.of("1", "2", "3", "4", "5", "6", "7"), versiones);
         }
         try (Statement s = db.createStatement(); ResultSet r = s.executeQuery("SELECT codigo FROM roles")) {
             Set<String> roles = new HashSet<>();

@@ -13,6 +13,10 @@ public class RecetaIngrediente {
     @Column(nullable = false, columnDefinition = "INT UNSIGNED") private Integer orden;
     @Column(length = 255) private String nota;
     protected RecetaIngrediente() { }
+    public RecetaIngrediente(Receta receta, Ingrediente ingrediente, BigDecimal cantidad, String unidad, Integer orden, String nota) {
+        this.receta = receta; this.ingrediente = ingrediente; this.id = new RecetaIngredienteId(receta.getId(), ingrediente.getId());
+        this.cantidad = cantidad; this.unidad = unidad; this.orden = orden; this.nota = nota;
+    }
     public RecetaIngredienteId getId() { return id; }
     public Receta getReceta() { return receta; }
     public Ingrediente getIngrediente() { return ingrediente; }

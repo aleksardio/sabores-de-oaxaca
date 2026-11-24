@@ -37,6 +37,11 @@ class SecurityConfig {
                 .authorizeHttpRequests(authorize -> authorize
                 .requestMatchers(HttpMethod.GET, "/api/v1/public/health").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/recetas", "/api/v1/recetas/{id}", "/api/v1/categorias").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/mis-recetas", "/api/v1/mis-recetas/{id}").authenticated()
+                .requestMatchers(HttpMethod.POST, "/api/v1/mis-recetas").authenticated()
+                .requestMatchers(HttpMethod.PUT, "/api/v1/mis-recetas/{id}").authenticated()
+                .requestMatchers(HttpMethod.DELETE, "/api/v1/mis-recetas/{id}").authenticated()
+                .requestMatchers(HttpMethod.POST, "/api/v1/mis-recetas/{id}/enviar-revision").authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/v1/auth/registro").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/auth/me").authenticated()
@@ -87,6 +92,11 @@ class SecurityConfig {
         config.setAllowedHeaders(List.of("Content-Type", "Authorization"));
         config.setAllowCredentials(false);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        CorsConfiguration privadas = new CorsConfiguration(config);
+        privadas.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE"));
+        privadas.setAllowedHeaders(List.of("Content-Type", "Authorization", "If-Match"));
+        source.registerCorsConfiguration("/api/v1/mis-recetas/*", privadas);
+        source.registerCorsConfiguration("/api/v1/mis-recetas/*/enviar-revision", privadas);
         source.registerCorsConfiguration("/api/v1/**", config);
         return source;
     }

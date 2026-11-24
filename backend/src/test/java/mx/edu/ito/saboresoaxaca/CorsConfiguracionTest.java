@@ -14,6 +14,10 @@ class CorsConfiguracionTest {
         assertNull(config.checkOrigin("https://atacante.invalid"));
         assertFalse(config.getAllowCredentials());
         assertNull(config.checkHttpMethod(org.springframework.http.HttpMethod.PUT));
+        var privada = new SecurityConfig().corsConfigurationSource("http://localhost:5173")
+                .getCorsConfiguration(new MockHttpServletRequest("OPTIONS", "/api/v1/mis-recetas/1"));
+        assertNotNull(privada);
+        assertNotNull(privada.checkHttpMethod(org.springframework.http.HttpMethod.PUT));
         assertNull(config.checkHeaders(java.util.List.of("X-No-Permitido")));
         var sinOrigenes = new SecurityConfig().corsConfigurationSource("").getCorsConfiguration(request);
         assertNotNull(sinOrigenes);
