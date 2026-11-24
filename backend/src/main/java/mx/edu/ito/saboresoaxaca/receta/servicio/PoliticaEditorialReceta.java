@@ -9,7 +9,7 @@ public final class PoliticaEditorialReceta {
     }
 
     public static boolean permiteEnviarRevision(String estado, boolean eliminada) {
-        return !eliminada && "BORRADOR".equals(estado);
+        return !eliminada && ("BORRADOR".equals(estado) || "RECHAZADA".equals(estado));
     }
 
     public static boolean permiteBajaAutor(String estado, boolean eliminada) {

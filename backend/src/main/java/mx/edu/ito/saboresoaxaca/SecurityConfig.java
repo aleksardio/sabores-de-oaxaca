@@ -38,7 +38,7 @@ class SecurityConfig {
                 .authorizeHttpRequests(authorize -> authorize
                 .requestMatchers(request -> request.getDispatcherType() == DispatcherType.ERROR && "/error".equals(request.getServletPath())).permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/public/health").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/v1/recetas", "/api/v1/recetas/{id}", "/api/v1/categorias").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/recetas", "/api/v1/recetas/{id}", "/api/v1/categorias", "/api/v1/ingredientes").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/mis-recetas", "/api/v1/mis-recetas/{id}").authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/v1/mis-recetas").authenticated()
                 .requestMatchers(HttpMethod.PUT, "/api/v1/mis-recetas/{id}").authenticated()

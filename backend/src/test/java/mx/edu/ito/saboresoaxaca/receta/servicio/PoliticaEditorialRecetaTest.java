@@ -16,11 +16,14 @@ class PoliticaEditorialRecetaTest {
     }
 
     @Test
-    void soloUnBorradorActivoPuedeEnviarse() {
+    void soloBorradoresORechazadasActivasPuedenEnviarse() {
         assertTrue(PoliticaEditorialReceta.permiteEnviarRevision("BORRADOR", false));
-        for (String estado : List.of("PENDIENTE", "PUBLICADA", "RECHAZADA", "ARCHIVADA"))
+        assertTrue(PoliticaEditorialReceta.permiteEnviarRevision("RECHAZADA", false));
+        for (String estado : List.of("PENDIENTE", "PUBLICADA", "ARCHIVADA"))
             assertFalse(PoliticaEditorialReceta.permiteEnviarRevision(estado, false));
         assertFalse(PoliticaEditorialReceta.permiteEnviarRevision("BORRADOR", true));
+        assertFalse(PoliticaEditorialReceta.permiteEnviarRevision("RECHAZADA", true));
+        assertFalse(PoliticaEditorialReceta.permiteEnviarRevision(null, false));
     }
 
     @Test

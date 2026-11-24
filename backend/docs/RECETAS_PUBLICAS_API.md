@@ -30,11 +30,17 @@ Sin `porciones`, `porcionesSolicitadas` y `cantidadAjustada` son `null`. Se admi
 
 `GET /api/v1/categorias` devuelve un arreglo de `{id,nombre,descripcion}` ordenado por nombre e ID. Los parámetros inválidos producen 400 y las recetas ocultas o inexistentes 404; los métodos no autorizados no son públicos. Una respuesta de validación tiene forma `{"error":"Parámetros inválidos"}`.
 
+`GET /api/v1/ingredientes` es público y devuelve `200` con un arreglo de objetos que contienen únicamente `id` y `nombre`, ordenados por nombre y luego ID ascendente según la colación de MySQL. Si no hay ingredientes devuelve `[]`. Los identificadores proceden de la base; no son datos de demostración.
+
+```json
+[{"id":1,"nombre":"Maíz"},{"id":2,"nombre":"Masa de maíz"}]
+```
+
 ## Bruno y React
 
 En Bruno, crear una petición GET con URL `{{baseUrl}}/api/v1/recetas`, sin autenticación, y añadir los parámetros deseados en Query. Para detalle, usar `{{baseUrl}}/api/v1/recetas/1` y opcionalmente `porciones`. `baseUrl` debe apuntar a la instancia local sin la ruta `/api/v1`.
 
-React debe adaptar los identificadores numéricos y nombres de campos: los datos demo usan otros nombres e identificadores. No se incluyen campos demo como región o duración. Interpretar las cantidades como decimales y conservar unidad y orden; no suponer que hay multimedia o categorías.
+En Bruno, enviar también `GET {{baseUrl}}/api/v1/ingredientes` sin autenticación. React puede consumirlo con `fetch(baseUrl + '/api/v1/ingredientes')` y usar el `id` real al crear o editar recetas. React debe adaptar los identificadores numéricos y nombres de campos: los datos demo usan otros nombres e identificadores. No se incluyen campos demo como región o duración. Interpretar las cantidades como decimales y conservar unidad y orden; no suponer que hay multimedia o categorías.
 
 ## Datos ficticios
 

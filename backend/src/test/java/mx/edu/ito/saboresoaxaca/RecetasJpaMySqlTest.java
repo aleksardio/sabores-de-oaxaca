@@ -58,6 +58,9 @@ class RecetasJpaMySqlTest {
             assertEquals(401, meAnonimo.statusCode());
             assertEquals("http://localhost:5173", meAnonimo.headers().firstValue("Access-Control-Allow-Origin").orElseThrow());
             assertEquals(0, jdbc.queryForObject("SELECT COUNT(*) FROM recetas", Integer.class));
+            var ingredientesVacios = get(client, base + "/ingredientes");
+            assertEquals(200, ingredientesVacios.statusCode());
+            assertEquals("[]", ingredientesVacios.body());
             var catalogoVacio = get(client, base + "/recetas");
             assertEquals(200, catalogoVacio.statusCode());
             assertTrue(catalogoVacio.body().contains("\"contenido\":[]"), catalogoVacio.body());
@@ -79,6 +82,10 @@ class RecetasJpaMySqlTest {
             jdbc.update("INSERT INTO ingredientes(nombre,creado_en) VALUES ('Sal',NOW(6)),('Chile',NOW(6))");
             Long sal = jdbc.queryForObject("SELECT id FROM ingredientes WHERE nombre='Sal'", Long.class);
             Long chile = jdbc.queryForObject("SELECT id FROM ingredientes WHERE nombre='Chile'", Long.class);
+            var catalogoIngredientes = get(client, base + "/ingredientes");
+            assertEquals(200, catalogoIngredientes.statusCode());
+            assertEquals("[{\"id\":" + chile + ",\"nombre\":\"Chile\"},{\"id\":" + sal + ",\"nombre\":\"Sal\"}]", catalogoIngredientes.body());
+            assertEquals(401, enviar(client, base + "/ingredientes", "POST", "{}", null).statusCode());
             jdbc.update("INSERT INTO recetas_ingredientes VALUES (?, ?, NULL, 'AL_GUSTO', 2, NULL), (?, ?, 2.000, 'G', 1, NULL)", ids.get(0), sal, ids.get(0), chile);
             jdbc.update("INSERT INTO recetas_multimedia(receta_id,tipo,url,orden,creado_en) VALUES (?,'IMAGEN','https://ejemplo.invalid/2',2,NOW(6)),(?,'IMAGEN','https://ejemplo.invalid/1',1,NOW(6))", ids.get(0), ids.get(0));
             new TransactionTemplate(app.getBean(org.springframework.transaction.PlatformTransactionManager.class)).executeWithoutResult(status -> {
@@ -259,7 +266,9 @@ class RecetasJpaMySqlTest {
             assertEquals(409, accion(client, revision, "POST", 3, jwt).statusCode());
             assertEquals(409, accion(client, rutaEditar, "DELETE", 3, jwt).statusCode());
             assertEquals(409, accion(client, base + "/mis-recetas/" + propia + "/enviar-revision", "POST", 0, jwt).statusCode());
-            jdbc.update("UPDATE recetas SET estado='RECHAZADA' WHERE id=?", creadaId);
+            jdbc.update("UPDATE recetas SET estado='ARCHIVADA' WHERE id=?", creadaId);
+            assertEquals(409, accion(client, revision, "POST", 4, jwt).statusCode());
+            jdbc.update("UPDATE recetas SET estado='PUBLICADA' WHERE id=?", creadaId);
             assertEquals(409, accion(client, revision, "POST", 4, jwt).statusCode());
             jdbc.update("UPDATE recetas SET estado='BORRADOR' WHERE id=?", creadaId);
             var carrera = java.util.concurrent.Executors.newFixedThreadPool(2);
@@ -359,6 +368,25 @@ class RecetasJpaMySqlTest {
             assertEquals("Faltan detalles", jdbc.queryForObject("SELECT detalle FROM auditoria_moderacion WHERE receta_id=? AND accion='RECHAZAR'", String.class, rechazoId));
             assertEquals(404, get(client, base + "/recetas/" + rechazoId).statusCode());
             assertEquals(409, client.send(reqRechazo, java.net.http.HttpResponse.BodyHandlers.ofString()).statusCode());
+            String reenviarUrl = base + "/mis-recetas/" + rechazoId + "/enviar-revision";
+            assertEquals(401, accion(client, reenviarUrl, "POST", 2, null).statusCode());
+            assertEquals(404, accion(client, reenviarUrl, "POST", 2, revisor).statusCode());
+            assertEquals(409, accion(client, reenviarUrl, "POST", 1, jwt).statusCode());
+            assertEquals(400, enviar(client, reenviarUrl, "POST", "", jwt).statusCode());
+            var cabeceraInvalida = java.net.http.HttpRequest.newBuilder(java.net.URI.create(reenviarUrl)).header("Authorization", "Bearer " + jwt).header("If-Match", "2").POST(java.net.http.HttpRequest.BodyPublishers.noBody()).build();
+            assertEquals(400, client.send(cabeceraInvalida, java.net.http.HttpResponse.BodyHandlers.ofString()).statusCode());
+            jdbc.update("UPDATE recetas SET estado='RECHAZADA' WHERE id=?", propia);
+            assertEquals(409, accion(client, base + "/mis-recetas/" + propia + "/enviar-revision", "POST", 0, jwt).statusCode());
+            jdbc.update("UPDATE recetas SET eliminado_en=NOW(6) WHERE id=?", propia);
+            assertEquals(409, accion(client, base + "/mis-recetas/" + propia + "/enviar-revision", "POST", 0, jwt).statusCode());
+            String corregida = cuerpo.replace("Nueva", "Rechazar corregida").replaceFirst("\\{", "{\"version\":2,");
+            assertEquals(200, enviar(client, base + "/mis-recetas/" + rechazoId, "PUT", corregida, jwt).statusCode());
+            var reenviada = accion(client, reenviarUrl, "POST", 3, jwt);
+            assertEquals(200, reenviada.statusCode(), reenviada.body());
+            assertTrue(reenviada.body().contains("\"estado\":\"PENDIENTE\""), reenviada.body());
+            assertTrue(reenviada.body().contains("\"version\":4"), reenviada.body());
+            assertEquals(4L, jdbc.queryForObject("SELECT version_receta FROM recetas WHERE id=?", Long.class, rechazoId));
+            assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM auditoria_moderacion WHERE receta_id=? AND accion='RECHAZAR'", Integer.class, rechazoId));
             assertEquals(409, accion(client, base + "/moderacion/recetas/" + propia + "/aprobar", "POST", 0, revisor).statusCode());
             var tercero = enviar(client, base + "/mis-recetas", "POST", cuerpo.replace("Nueva", "Concurrencia moderacion"), jwt);
             assertEquals(201, tercero.statusCode());
