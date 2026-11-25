@@ -7,7 +7,7 @@ Aplicación web para descubrir, compartir y moderar recetas oaxaqueñas. Incluye
 - **Frontend:** React 19 y Vite, con cliente HTTP para la API.
 - **Backend:** Java 17, Spring Boot 4.1.2, Spring Security, JWT, BCrypt, Bean Validation y Spring Data JPA. Controladores, DTOs, servicios transaccionales y repositorios separan las responsabilidades.
 - **Datos:** MySQL 8.0 y migraciones Flyway V1–V7; archivos multimedia externos referenciados mediante HTTPS.
-- **Despliegue previsto:** API y frontend detrás de Nginx con TLS en un VPS. Los archivos de subida necesitan almacenamiento persistente independiente del repositorio y de `dist`.
+- **Despliegue en VPS:** frontend y API detrás de Nginx con HTTPS en `https://saboresdeoaxaca.food`. El equipo comprobó la API pública y el frontend desplegados; la validación debe repetirse después de cada actualización. Los archivos subidos usan almacenamiento persistente independiente del repositorio y de `dist`.
 
 La API expone `/api/v1`. Las rutas públicas permiten consultar recetas publicadas visibles, categorías e ingredientes. La autorización se comprueba en el servidor; el frontend no sustituye sus reglas. Los contratos específicos están en [`backend/docs/`](backend/docs/).
 
@@ -68,7 +68,7 @@ Importar la carpeta [`bruno/`](bruno/) con **Open Collection**, seleccionar el e
 
 ## Despliegue y HTTPS
 
-El dominio previsto para los enlaces de recuperación es `https://saboresdeoaxaca.food`; su disponibilidad, DNS, certificado y despliegue efectivo deben verificarse en el entorno destino. Configurar Nginx, TLS, CORS, base y secretos externamente; no usar el perfil `bootstrap` en producción. La subida requiere `APP_UPLOAD_DIR` y `APP_UPLOAD_PUBLIC_ORIGIN`, volumen persistente y publicación controlada por Nginx: ver [multimedia](backend/docs/MULTIMEDIA_UPLOADS_API.md). Coordinar respaldos de MySQL y archivos externos.
+El entorno de despliegue del equipo usa `https://saboresdeoaxaca.food` (frontend y API bajo `/api/v1`) y `https://media.saboresdeoaxaca.food` para multimedia. Se comprobaron HTTPS, el servicio Spring Boot y una respuesta pública correcta del catálogo; la comprobación no sustituye las pruebas integrales de aceptación, correo o SMS. Los ajustes de Nginx, TLS, CORS, base y secretos se gestionan fuera del repositorio; **no** usar el perfil `bootstrap` en producción. La subida requiere `APP_UPLOAD_DIR` y `APP_UPLOAD_PUBLIC_ORIGIN`, volumen persistente y publicación controlada por Nginx: ver [multimedia](backend/docs/MULTIMEDIA_UPLOADS_API.md). Existe un respaldo SQL privado del VPS; falta acreditar una restauración aislada y respaldar también los archivos multimedia.
 
 ## Limitaciones y pendientes
 
@@ -76,11 +76,13 @@ El dominio previsto para los enlaces de recuperación es `https://saboresdeoaxac
 - El inicio con Google y las notificaciones SMS no deben considerarse implementados ni operativos; WhatsApp está omitido del alcance.
 - Los paneles administrativos que siguen usando datos demo no representan necesariamente las API reales de administración y reportes. Confirmar la integración de cada vista antes de la entrega.
 - Las URL multimedia de los datos ficticios no son imágenes reales. Los datos del script demo no cubren todavía el volumen propuesto de 10–15 recetas e ingredientes; falta confirmar los mínimos de la asignación.
-- Para producción quedan por verificar la protección distribuida contra abuso, los respaldos y la publicación de archivos; consultar los contratos por módulo.
+- Sigue pendiente validar la recuperación de un respaldo MySQL en un esquema aislado, respaldar multimedia, comprobar controles contra abuso y repetir pruebas funcionales después de cada despliegue. No confundir «dump creado» con «restauración comprobada».
 
 ## Diseño, código y colaboración
 
 - [Prototipo Figma](https://www.figma.com/design/x3Ny7TxoDdnTldzxbUAz6u/Sabores-de-Oaxaca-%C2%B7-Proyecto-Final-%C2%B7-Prototipo-Navegable?node-id=0-1)
 - [Repositorio GitHub](https://github.com/aleksardio/sabores-de-oaxaca)
+- [GitHub Projects público: Sabores de Oaxaca - Proyecto Final](https://github.com/users/aleksardio/projects/2) — tablero de 17 Issues y 9 PR fusionados (estado revisado el 25 de noviembre de 2026, UTC).
+- [Issues y pendientes](https://github.com/aleksardio/sabores-de-oaxaca/issues) — estado real y responsables de implementación.
 
 Aleks participa principalmente en backend, seguridad y despliegue; Alexis, en frontend y diseño. Trabajar en ramas por funcionalidad, ejecutar las pruebas aplicables, abrir Pull Requests y revisar contratos y cambios antes de integrarlos. No incluir credenciales ni información personal en commits o capturas.
