@@ -8,7 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
-import org.springframework.mail.SimpleMailMessage;
+import jakarta.mail.MessagingException;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -56,12 +56,8 @@ public class RecuperacionServicio {
         try {
             Mensaje mensaje=tx.execute(status -> crear(correo));
             if (mensaje == null) return;
-            SimpleMailMessage correoSalida=new SimpleMailMessage();
-            correoSalida.setFrom(remitente); correoSalida.setTo(mensaje.destino());
-            correoSalida.setSubject("Recuperación de contraseña");
-            correoSalida.setText("Para restablecer tu contraseña abre https://saboresdeoaxaca.food/restablecer-contrasena#token=" + mensaje.token() + "\nEl enlace vence en 20 minutos. Si no lo solicitaste, ignora este mensaje.");
-            mail.send(correoSalida);
-        } catch (RuntimeException e) { LOG.error("No se pudo procesar el correo de recuperación"); }
+            mail.send(CorreoRecuperacion.crear(mail,remitente,mensaje.destino(),mensaje.token()));
+        } catch (RuntimeException | MessagingException e) { LOG.error("No se pudo procesar el correo de recuperación"); }
     }
     private Mensaje crear(String correo) {
         List<Usuario> encontrados=em.createQuery("select u from Usuario u where u.correo=:correo",Usuario.class).setParameter("correo",correo).setLockMode(LockModeType.PESSIMISTIC_WRITE).getResultList();
