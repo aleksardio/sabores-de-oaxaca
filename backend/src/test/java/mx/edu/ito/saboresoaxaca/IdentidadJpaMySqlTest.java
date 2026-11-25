@@ -311,6 +311,36 @@ class IdentidadJpaMySqlTest {
         assertEquals(401, enviar(client, base + "login", login, null).statusCode());
     }
 
+    @Test
+    void administracionUsuariosPersisteRolesYFiltra() throws Exception {
+        JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
+        jdbc.update("INSERT INTO usuarios(correo,nombre_visible,contrasena_hash,version_tokens,version_perfil,creado_en,actualizado_en) VALUES ('admin_prueba@ejemplo.invalid','Admin prueba','x',0,0,NOW(6),NOW(6)),('persona_prueba@ejemplo.invalid','Persona prueba','x',0,0,NOW(6),NOW(6))");
+        Long admin = jdbc.queryForObject("SELECT id FROM usuarios WHERE correo='admin_prueba@ejemplo.invalid'", Long.class);
+        Long persona = jdbc.queryForObject("SELECT id FROM usuarios WHERE correo='persona_prueba@ejemplo.invalid'", Long.class);
+        jdbc.update("INSERT INTO usuarios_roles(usuario_id,rol_id,asignado_en) SELECT ?,id,NOW(6) FROM roles WHERE codigo='ADMIN'", admin);
+        Instant ahora = Instant.now();
+        String jwt = token(admin, ahora.minusSeconds(1), ahora.plusSeconds(300), "sabores-oaxaca-api", "sabores-oaxaca-web");
+        int puerto = ((WebServerApplicationContext) context).getWebServer().getPort();
+        String base = "http://127.0.0.1:" + puerto + "/api/v1/admin/usuarios";
+        HttpClient cliente = HttpClient.newHttpClient();
+        var listado = adminSolicitud(cliente, base + "?texto=persona_prueba&pagina=0&tamano=1", "GET", jwt);
+        assertEquals(200, listado.statusCode(), listado.body());
+        assertTrue(listado.body().contains("persona_prueba@ejemplo.invalid"), listado.body());
+        assertFalse(listado.body().contains("contrasena"));
+        assertEquals(404, adminSolicitud(cliente, base + "/999999999", "GET", jwt).statusCode());
+        String rol = base + "/" + persona + "/roles/cocinero";
+        assertEquals(204, adminSolicitud(cliente, rol, "PUT", jwt).statusCode());
+        assertEquals(204, adminSolicitud(cliente, rol, "PUT", jwt).statusCode());
+        assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM usuarios_roles ur JOIN roles r ON r.id=ur.rol_id WHERE ur.usuario_id=? AND r.codigo='COCINERO'", Integer.class, persona));
+        assertTrue(adminSolicitud(cliente, base + "/" + persona, "GET", jwt).body().contains("COCINERO"));
+        assertTrue(adminSolicitud(cliente, base + "?rol=COCINERO&texto=persona_prueba", "GET", jwt).body().contains("persona_prueba@ejemplo.invalid"));
+        assertEquals(204, adminSolicitud(cliente, rol, "DELETE", jwt).statusCode());
+        assertEquals(0, jdbc.queryForObject("SELECT COUNT(*) FROM usuarios_roles WHERE usuario_id=?", Integer.class, persona));
+        assertEquals(404, adminSolicitud(cliente, base + "/999999999/roles/cocinero", "PUT", jwt).statusCode());
+    }
+    private static HttpResponse<String> adminSolicitud(HttpClient cliente, String url, String metodo, String jwt) throws Exception {
+        return cliente.send(HttpRequest.newBuilder(URI.create(url)).header("Authorization", "Bearer " + jwt).method(metodo, HttpRequest.BodyPublishers.noBody()).build(), HttpResponse.BodyHandlers.ofString());
+    }
     private static String token(Long id, Instant iat, Instant exp, String iss, String aud) {
         var claims = JwtClaimsSet.builder().subject(id.toString()).issuer(iss).audience(List.of(aud)).issuedAt(iat).expiresAt(exp).claim("version_tokens", 0).build();
         return context.getBean(JwtEncoder.class).encode(JwtEncoderParameters.from(JwsHeader.with(MacAlgorithm.HS256).build(), claims)).getTokenValue();
