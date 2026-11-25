@@ -2,6 +2,12 @@
 
 El diagrama [ER](../backend/docs/DIAGRAMA_ER.md) es conceptual; las restricciones reales se definen en [V1–V7](../backend/src/main/resources/db/migration/) y el [modelo de datos](../backend/docs/MODELO_DATOS.md). V5 incorpora cuatro roles oficiales; V4 almacena hashes de recuperación, nunca tokens en claro. El diagrama no representa todos los atributos o versiones: contrastar con las migraciones. No modificar migraciones aplicadas ni incorporar datos personales al repositorio.
 
+Las recetas usan baja lógica y versión optimista (V7). Sus asociaciones se
+conservan al dar de baja o restaurar; las acciones administrativas registran
+auditoría persistente. Restaurar una receta publicada la deja pendiente de
+moderación. El equipo comunicó una validación de este flujo en MySQL 8 aislado;
+véase el [checklist](../CHECKLIST_ENTREGA.md) para su alcance y pendientes.
+
 ## Volumen de ejemplo
 
 El documento [PLAN_MIGRACIONES](../backend/docs/PLAN_MIGRACIONES.md) propone 10–15 ingredientes y recetas ficticias, y 10–15 categorías solo si son útiles y aprobadas; no identifica esas cifras como obligación para todas las tablas. El enunciado original de la asignación no está disponible en este repositorio: **pendiente confirmar los mínimos oficiales**. El script reproducible [recetas_oaxaquenas.sql](../backend/datos-demo-local/recetas_oaxaquenas.sql) prepara 13 recetas, 27 ingredientes y 5 categorías útiles en una base nueva de desarrollo. Requiere un autor activo elegido y reutiliza filas existentes; los totales efectivos dependen de la base. Las imágenes de ejemplo usan dominios `.invalid`. No crea cuentas ni secretos; no siembra favoritos ni reportes. Las categorías no se aumentan artificialmente a 10–15 sin confirmar el requisito. No se han inspeccionado ni alterado datos de producción.

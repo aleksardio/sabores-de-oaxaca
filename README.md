@@ -1,6 +1,6 @@
 # Sabores de Oaxaca
 
-Aplicación web para descubrir, compartir y moderar recetas oaxaqueñas. Incluye catálogo público, detalle con ajuste de porciones, registro e inicio de sesión, favoritos, edición y envío de recetas, moderación y reportes. El backend también ofrece administración de usuarios y roles, subida de multimedia y recuperación de contraseña bajo configuración explícita. No todos estos flujos están integrados en la interfaz; consultar [limitaciones](#limitaciones-y-pendientes).
+Aplicación web para descubrir, compartir y moderar recetas oaxaqueñas. Incluye catálogo público, detalle con ajuste de porciones, registro e inicio de sesión, favoritos, edición y envío de recetas, moderación, reportes y panel de administración de usuarios, catálogos y recetas. La recuperación de contraseña y las alertas SMS requieren configuración explícita; consultar [limitaciones](#limitaciones-y-pendientes).
 
 ## Tecnologías y arquitectura
 
@@ -20,7 +20,7 @@ Los roles no son jerárquicos: una cuenta puede tener varios.
 | `USUARIO` | Autenticarse, gestionar favoritos y reportar recetas visibles ajenas. |
 | `COCINERO` | Crear y editar sus borradores o rechazadas, enviar a revisión y subir multimedia. |
 | `MODERADOR` | Revisar recetas y resolver reportes, sin decidir sobre sus propios reportes o recetas. |
-| `ADMIN` | Administrar usuarios y asignar o retirar `COCINERO`; también puede moderar con las mismas restricciones de conflicto de interés. |
+| `ADMIN` | Consultar usuarios, asignar o retirar `COCINERO`, consultar catálogos y administrar bajas y restauraciones de recetas; también puede moderar con las mismas restricciones de conflicto de interés. |
 
 El registro público no concede privilegios administrativos. La edición y las decisiones requieren versiones vigentes cuando el contrato lo indica. Ver [recetas propias](backend/docs/RECETAS_COCINERO_API.md), [moderación](backend/docs/MODERACION_API.md), [reportes](backend/docs/REPORTES_API.md) y [administración](backend/docs/ADMIN_USUARIOS_API.md).
 
@@ -35,7 +35,7 @@ cd backend
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
 ```
 
-En Windows usar `mvnw.cmd`. El perfil `dev` habilita Flyway, aplica las migraciones pendientes y valida el esquema con Hibernate; no hace `clean` ni actualiza tablas por Hibernate. Ante una base existente sin historial Flyway, revisar y respaldar antes de intervenir; no aplicar baseline o repair automáticamente. El perfil `bootstrap` solo sirve para comprobar el arranque sin MySQL y no representa una aplicación funcional. Ver [configuración backend](backend/README.md), teniendo en cuenta que sus apartados de estado y versión de migraciones pueden estar desactualizados.
+En Windows usar `mvnw.cmd`. El perfil `dev` habilita Flyway, aplica las migraciones pendientes y valida el esquema con Hibernate; no hace `clean` ni actualiza tablas por Hibernate. Ante una base existente sin historial Flyway, revisar y respaldar antes de intervenir; no aplicar baseline o repair automáticamente. El perfil `bootstrap` solo sirve para comprobar el arranque sin MySQL y no representa una aplicación funcional. Ver [configuración backend](backend/README.md).
 
 Para el frontend, en otra terminal:
 
@@ -73,10 +73,12 @@ El entorno de despliegue del equipo usa `https://saboresdeoaxaca.food` (frontend
 ## Limitaciones y pendientes
 
 - La recuperación está deshabilitada por defecto. Requiere configuración explícita y un transporte SMTP verificado; el VPS de DigitalOcean tiene salida SMTP restringida. No se garantiza entrega a proveedores externos. Ver [recuperación](backend/docs/RECUPERACION_CONTRASENA_API.md).
-- El inicio con Google y las notificaciones SMS no deben considerarse implementados ni operativos; WhatsApp está omitido del alcance.
-- Los paneles administrativos que siguen usando datos demo no representan necesariamente las API reales de administración y reportes. Confirmar la integración de cada vista antes de la entrega.
+- El aviso SMS por reporte está implementado con Twilio, pero es opcional y está deshabilitado por defecto; su configuración y entrega efectiva dependen del entorno. No existe un endpoint público para enviar SMS. El inicio con Google no está implementado y WhatsApp está fuera del alcance.
+- Catálogos y recetas del panel administrativo consultan la API; el directorio y perfiles de autores siguen utilizando datos de demostración.
 - Las URL multimedia de los datos ficticios no son imágenes reales. El script demo prepara 13 recetas y 27 ingredientes; falta confirmar los mínimos oficiales de la asignación.
 - Sigue pendiente validar la recuperación de un respaldo MySQL en un esquema aislado, respaldar multimedia, comprobar controles contra abuso y repetir pruebas funcionales después de cada despliegue. No confundir «dump creado» con «restauración comprobada».
+
+Consultar el [checklist de entrega](CHECKLIST_ENTREGA.md) y el [índice REST](backend/docs/API_REST.md) para los contratos y verificaciones pendientes.
 
 ## Diseño, código y colaboración
 

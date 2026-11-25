@@ -1,0 +1,15 @@
+meta {
+  name: Detalle de receta administrativa
+  type: http
+  seq: 46
+}
+get {
+  url: {{baseUrl}}/api/v1/admin/recetas/{{recetaAdminId}}
+  auth: bearer
+}
+auth:bearer {
+  token: {{jwtAdmin}}
+}
+tests {
+  test("Detalle: 200", function () { expect(res.getStatus()).to.equal(200); });
+}

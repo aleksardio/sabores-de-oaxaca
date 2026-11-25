@@ -8,9 +8,9 @@ Las ilustraciones se recrean con CSS y las fuentes Fraunces e Inter se cargan
 desde Google Fonts.
 Inicio, el catálogo y el detalle consultan la API pública. El registro, el
 inicio de sesión, el perfil, los favoritos, el panel del cocinero y la
-moderación de recetas y reportes y la administración de usuarios también
-requieren el backend. Los catálogos y recetas del panel de administración
-siguen siendo demostraciones con datos locales.
+moderación de recetas y reportes y la administración de usuarios, catálogos y
+recetas también requieren el backend. Los autores de demostración no representan
+un directorio real.
 
 ## Instalar y ejecutar
 
@@ -365,8 +365,8 @@ al panel. El servidor autoriza cada solicitud por separado.
 | `/admin` | Redirige a `/admin/usuarios`. |
 | `/admin/usuarios` | Listado de la API con búsqueda por nombre visible o correo (hasta 100 caracteres), filtros por rol y estado, y páginas de 20. |
 | `/admin/usuarios/:id` | ID, nombre visible, correo, estado, fecha de registro UTC y roles de la cuenta. |
-| `/admin/catalogos` | **Demostración:** categorías e ingredientes de solo lectura. |
-| `/admin/recetas` | **Demostración:** filtro por estado editorial y baja lógica; las vistas previas no guardan cambios. |
+| `/admin/catalogos` | Categorías e ingredientes reales de solo lectura, con búsqueda. |
+| `/admin/recetas` | Listado real paginado, filtros y baja o restauración con justificación y confirmación. |
 
 El listado vuelve a la primera página al cambiar un filtro, cancela consultas
 obsoletas y usa los totales devueltos por el servidor. No hay datos de ejemplo
@@ -391,6 +391,10 @@ No hay acciones reales para otros roles, bajas ni reactivaciones de cuentas.
 El backend **no genera todavía auditoría específica** de estos cambios.
 
 Contrato: [ADMIN_USUARIOS_API.md](../backend/docs/ADMIN_USUARIOS_API.md).
+Las recetas usan el [contrato administrativo](../backend/docs/ADMIN_RECETAS_API.md):
+las acciones envían `If-Match` con la versión y vuelven a consultar el listado;
+restaurar una publicación la deja pendiente de aprobación. Un fallo no presenta
+datos ficticios ni confirma una operación no confirmada por el servidor.
 `npm test` cubre el servicio y el flujo de registro, asignación, acceso al
 editor y retiro con HTTP simulado. La prueba de Chromium
 [`qa/admin-users.mjs`](qa/admin-users.mjs) usa datos ficticios, intercepta todas
@@ -504,8 +508,8 @@ con MySQL y el perfil `dev`.
 
 #### Recuperación y restablecimiento de contraseña
 
-**La recuperación está deshabilitada actualmente en el backend porque no se
-ha verificado el transporte SMTP.** El frontend implementa el
+La recuperación está deshabilitada por defecto y requiere configuración SMTP
+explícita; el estado y la entrega deben comprobarse en el entorno correspondiente. El frontend implementa el
 [contrato del PR #42](../backend/docs/RECUPERACION_CONTRASENA_API.md), pero
 las pruebas con HTTP simulado no comprueban el envío ni la entrega de correos
 y no demuestran que el flujo completo funcione en producción.
@@ -614,8 +618,8 @@ regionales y no consulta recetas. Esto agrega hasta una solicitud por tarjeta
 en cada carga: incluir una portada en el DTO del catálogo sería más eficiente.
 La preparación se muestra como texto, sin HTML, y puede estar vacía.
 
-Las secciones administrativas de catálogos y recetas conservan datos
-de demostración. `demoAdminUsers` se conserva solo para pruebas históricas y no
+Las secciones administrativas de catálogos y recetas consultan la API.
+`demoAdminUsers` se conserva solo para pruebas históricas y no
 alimenta el panel de usuarios. Los datos ficticios no son un respaldo de la API.
 `demoAuthors` sigue alimentando el directorio ficticio.
 `demoCookRecipes`, `src/data/recipes.js` y `src/utils/servings.js` se

@@ -2,6 +2,14 @@
 
 En Bruno seleccionar **Open Collection** y abrir esta carpeta. Elegir el entorno `Local` y configurar `baseUrl` con el origen de un backend de pruebas. La colección no incluye credenciales: proporcionar en la sesión local correo, contraseñas, JWT y IDs reales de prueba, sin guardar secretos en Git. El token de login está en el campo `token` de la respuesta; copiarlo manualmente a `jwt` o al rol correspondiente. Usar cuentas distintas: `jwt` de USUARIO sin otros roles, `jwtCocinero`, `jwtModerador` y `jwtAdmin`. Consultar las respuestas antes de cambiar variables. No ejecutar la colección completa indiscriminadamente: varias solicitudes cambian datos.
 
+Las peticiones 45–48 cubren listado, detalle, baja y restauración administrativa
+de recetas. Configura localmente `recetaAdminId` y `versionAdmin` con el ID y
+la versión vigentes; `If-Match` incluye las comillas. Baja y restauración son
+escrituras reales: usar exclusivamente una base aislada autorizada, consultar de
+nuevo el detalle y actualizar la versión entre operaciones. Una receta publicada
+restaurada queda pendiente y no vuelve a publicarse automáticamente. No guardar
+JWT, credenciales ni datos personales en los archivos versionados.
+
 Crear usuarios de prueba con contraseñas generadas fuera del repositorio y obtener los permisos mediante un administrador autorizado. Las categorías e ingredientes se consultan en los GET públicos; sus ID no están codificados. Tras crear o editar, obtener el ID y la versión vigentes; antes de enviar, aprobar o rechazar, actualizar `version`. El `If-Match` de esas peticiones ya incluye las comillas. La receta de moderación debe ser pendiente, completa, activa y de otra persona.
 
 Para reportes usar una receta pública que no pertenezca al reportante y un moderador que no sea autor ni reportante. Descartar y dar de baja requieren reportes pendientes distintos. La baja oculta la receta y resuelve sus reportes pendientes; nunca usar datos de producción. Favoritos y roles también escriben datos. Logout invalida las sesiones anteriores de esa cuenta: ejecutarlo al final y volver a iniciar sesión. Para multipart seleccionar un archivo local permitido en Bruno o proporcionar su ruta local en `archivo`; configurar almacenamiento externo y origen HTTPS de prueba. Una URL de subida puede ser pública.

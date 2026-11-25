@@ -1,0 +1,22 @@
+meta {
+  name: Baja administrativa de receta
+  type: http
+  seq: 47
+}
+post {
+  url: {{baseUrl}}/api/v1/admin/recetas/{{recetaAdminId}}/baja
+  body: json
+  auth: bearer
+}
+headers {
+  If-Match: "{{versionAdmin}}"
+}
+auth:bearer {
+  token: {{jwtAdmin}}
+}
+body:json {
+  {"detalle":"Prueba autorizada en entorno aislado"}
+}
+tests {
+  test("Baja: 200", function () { expect(res.getStatus()).to.equal(200); });
+}
