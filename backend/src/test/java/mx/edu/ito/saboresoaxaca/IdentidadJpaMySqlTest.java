@@ -69,6 +69,8 @@ class IdentidadJpaMySqlTest {
 
     @BeforeAll
     static void iniciar() throws SQLException {
+        org.mockito.Mockito.when(correoSimulado.createMimeMessage()).thenAnswer(invocacion ->
+                new jakarta.mail.internet.MimeMessage(jakarta.mail.Session.getInstance(new java.util.Properties())));
         String schema = requerido("MYSQL_IT_SCHEMA");
         if (!schema.matches("sabores_oaxaca_it_[a-z0-9_]{1,40}")) {
             throw new IllegalArgumentException("Se requiere un esquema dedicado sabores_oaxaca_it_<nombre>");
@@ -399,21 +401,22 @@ class IdentidadJpaMySqlTest {
         var existente=enviar(cliente,base+"recuperar-contrasena","{\"correo\":\"recuperar@ejemplo.invalid\"}",null);
         var inexistente=enviar(cliente,base+"recuperar-contrasena","{\"correo\":\"noexiste@ejemplo.invalid\"}",null);
         assertEquals(200,existente.statusCode()); assertEquals(existente.body(),inexistente.body());
-        var captor=org.mockito.ArgumentCaptor.forClass(org.springframework.mail.SimpleMailMessage.class);
+        var captor=org.mockito.ArgumentCaptor.forClass(jakarta.mail.internet.MimeMessage.class);
         org.mockito.Mockito.verify(correoSimulado,org.mockito.Mockito.timeout(10000).times(1)).send(captor.capture());
         var correo=captor.getValue();
-        assertEquals("recuperar@ejemplo.invalid",correo.getTo()[0]);
-        var matcher=java.util.regex.Pattern.compile("https://saboresdeoaxaca\\.food/restablecer-contrasena#token=([A-Za-z0-9_-]{43})").matcher(correo.getText());
+        assertEquals("recuperar@ejemplo.invalid",((jakarta.mail.internet.InternetAddress)correo.getRecipients(jakarta.mail.Message.RecipientType.TO)[0]).getAddress());
+        var matcher=java.util.regex.Pattern.compile("https://saboresdeoaxaca\\.food/restablecer-contrasena#token=([A-Za-z0-9_-]{43})").matcher(textoPlano(correo));
         assertTrue(matcher.find()); String token=matcher.group(1);
         assertFalse(existente.body().contains(token));
         Long id=jdbc.queryForObject("SELECT id FROM usuarios WHERE correo='recuperar@ejemplo.invalid'",Long.class);
+        assertEquals(1200L,jdbc.queryForObject("SELECT TIMESTAMPDIFF(SECOND,creado_en,expira_en) FROM recuperaciones_contrasena WHERE usuario_id=?",Long.class,id));
         byte[] hash=java.security.MessageDigest.getInstance("SHA-256").digest(token.getBytes(java.nio.charset.StandardCharsets.US_ASCII));
         assertArrayEquals(hash,jdbc.queryForObject("SELECT token_hash FROM recuperaciones_contrasena WHERE usuario_id=?",byte[].class,id));
         jdbc.update("UPDATE recuperaciones_contrasena SET creado_en=DATE_SUB(NOW(6),INTERVAL 2 MINUTE) WHERE usuario_id=?",id);
         context.getBean(mx.edu.ito.saboresoaxaca.auth.recuperacion.RecuperacionServicio.class).solicitar("recuperar@ejemplo.invalid");
-        var captorSegundo=org.mockito.ArgumentCaptor.forClass(org.springframework.mail.SimpleMailMessage.class);
+        var captorSegundo=org.mockito.ArgumentCaptor.forClass(jakarta.mail.internet.MimeMessage.class);
         org.mockito.Mockito.verify(correoSimulado,org.mockito.Mockito.timeout(10000).times(2)).send(captorSegundo.capture());
-        var segundoMatcher=java.util.regex.Pattern.compile("#token=([A-Za-z0-9_-]{43})").matcher(captorSegundo.getAllValues().get(1).getText());
+        var segundoMatcher=java.util.regex.Pattern.compile("#token=([A-Za-z0-9_-]{43})").matcher(textoPlano(captorSegundo.getAllValues().get(1)));
         assertTrue(segundoMatcher.find());
         token=segundoMatcher.group(1);
         assertEquals(1,jdbc.queryForObject("SELECT COUNT(*) FROM recuperaciones_contrasena WHERE usuario_id=? AND invalidado_en IS NOT NULL",Integer.class,id));
@@ -443,7 +446,20 @@ class IdentidadJpaMySqlTest {
         var desactivada=enviar(cliente,base+"recuperar-contrasena","{\"correo\":\"recuperar@ejemplo.invalid\"}",null);
         assertEquals(existente.body(),desactivada.body());
         assertEquals(429,enviar(cliente,base+"recuperar-contrasena","{\"correo\":\"noexiste@ejemplo.invalid\"}",null).statusCode());
-        org.mockito.Mockito.verify(correoSimulado,org.mockito.Mockito.after(1000).times(2)).send(org.mockito.ArgumentMatchers.any(org.springframework.mail.SimpleMailMessage.class));
+        org.mockito.Mockito.verify(correoSimulado,org.mockito.Mockito.after(1000).times(2)).send(org.mockito.ArgumentMatchers.any(jakarta.mail.internet.MimeMessage.class));
+    }
+
+    private static String textoPlano(jakarta.mail.Part parte) throws Exception {
+        if (parte instanceof jakarta.mail.internet.MimeMessage mensaje) mensaje.saveChanges();
+        if (parte.isMimeType("text/plain")) return (String) parte.getContent();
+        if (parte.isMimeType("multipart/*")) {
+            var contenido=(jakarta.mail.Multipart) parte.getContent();
+            for (int i=0;i<contenido.getCount();i++) {
+                String texto=textoPlano(contenido.getBodyPart(i));
+                if (texto!=null) return texto;
+            }
+        }
+        return null;
     }
 
     private static String extraerToken(String respuesta) {
