@@ -6,7 +6,6 @@ export default function Footer() {
       <div className="container footer-content">
         <p><span aria-hidden="true">✦ </span>Sabores de Oaxaca · Cultura que vive en cada mesa</p>
         <nav className="footer-nav" aria-label="Comunidad y cuenta">
-          <NavLink to="/autores">Autores</NavLink>
           <NavLink to="/perfil">Mi perfil</NavLink>
           <NavLink to="/favoritos">Favoritos</NavLink>
           <NavLink to="/cocinero/recetas">Mis recetas</NavLink>

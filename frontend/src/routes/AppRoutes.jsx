@@ -8,8 +8,6 @@ import AdminCatalogsPage from '../pages/AdminCatalogsPage.jsx'
 import AdminRecipesPage from '../pages/AdminRecipesPage.jsx'
 import AdminUserDetailPage from '../pages/AdminUserDetailPage.jsx'
 import AdminUsersPage from '../pages/AdminUsersPage.jsx'
-import AuthorProfilePage from '../pages/AuthorProfilePage.jsx'
-import AuthorsPage from '../pages/AuthorsPage.jsx'
 import CookRecipePage from '../pages/CookRecipePage.jsx'
 import CookRecipesPage from '../pages/CookRecipesPage.jsx'
 import FavoritesPage from '../pages/FavoritesPage.jsx'
@@ -37,8 +35,6 @@ export default function AppRoutes({ readResetFlow }) {
         <Route path="recetas/:id" element={<RecipeDetailPage />} />
         <Route path="tradiciones" element={<TraditionsPage />} />
         <Route path="perfil" element={<ProfilePage />} />
-        <Route path="autores" element={<AuthorsPage />} />
-        <Route path="autores/:id" element={<AuthorProfilePage />} />
         <Route path="favoritos" element={<FavoritesPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>

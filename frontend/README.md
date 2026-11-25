@@ -9,8 +9,8 @@ desde Google Fonts.
 Inicio, el catálogo y el detalle consultan la API pública. El registro, el
 inicio de sesión, el perfil, los favoritos, el panel del cocinero y la
 moderación de recetas y reportes y la administración de usuarios, catálogos y
-recetas también requieren el backend. Los autores de demostración no representan
-un directorio real.
+recetas también requieren el backend. El directorio público de autores de
+demostración se retiró; los autores reales permanecen en las recetas.
 
 ## Instalar y ejecutar
 
@@ -62,9 +62,7 @@ que la sesión no es válida. Un 403 es falta de autorización, no un 401.
 | `/recetas/1` | Detalle y porciones base, si el ID 1 está disponible en la base; utiliza un ID visible del catálogo. |
 | `/recetas/no-existe` | «Receta no encontrada» sin hacer una solicitud con ID inválido. |
 | `/perfil` | Enlaces a login y registro como visitante; nombre, correo, roles y cierre de sesión al autenticarte. |
-| `/autores` | Directorio de perfiles ficticios, marcados como ejemplos. |
-| `/autores/ejemplo` y `/autores/ejemplo-2` | Perfil público de demostración, aviso sobre las recetas asociadas y enlace al catálogo. |
-| `/autores/no-existe` | «Autor no encontrado» y enlace al directorio. |
+| `/autores` y `/autores/ejemplo` | Rutas antiguas: muestran la página normal de recurso no encontrado. |
 | `/favoritos` | Favoritos personales de la API; carga, vacío, reintento y eliminación. Para visitantes, enlace a login con retorno y al catálogo. |
 | `/login` | Acceso con correo y contraseña, mostrar u ocultar contraseña y enlaces a alta y recuperación. |
 | `/registro` | Alta con nombre visible, correo, contraseña y confirmación. |
@@ -418,30 +416,24 @@ las llamadas API y bloquea otros orígenes. Desde `frontend/`, ejecuta
 La página usa Fraunces e Inter, la paleta del sitio e ilustraciones CSS; la
 pantalla de Tradiciones del prototipo no se pudo verificar en Figma.
 
-### Perfil, autores y favoritos
+### Perfil y favoritos
 
-- Usa los enlaces **Mi perfil**, **Autores** y **Favoritos** del pie público.
+- Usa los enlaces **Mi perfil** y **Favoritos** del pie público.
   Comprueba que **Iniciar sesión** y **Crear una cuenta** abren sus formularios
   sin la cabecera ni el pie públicos.
 - En **Mi perfil**, una sesión confirmada muestra exclusivamente los datos
   de `/me`. No hay edición de nombre, contraseña, avatar ni roles.
-- Abre los dos perfiles desde el directorio y prueba también un identificador
-  desconocido. Los autores ficticios viven en `src/data/demoAuthors.js`;
-  no están relacionados con las recetas ni los autores de la API.
-- Desde cada autor y desde **Favoritos** puedes abrir el catálogo público.
+- Desde **Favoritos** puedes abrir el catálogo público.
   Con sesión iniciada, marca una receta desde **Catálogo** o **Detalle**,
   comprueba que aparece en **Favoritos** y quítala desde allí. Al regresar al
   catálogo, el control debe ofrecer agregarla de nuevo.
 - Recarga las rutas nuevas directamente. A **320, 390, 768 y 1440 px**, revisa
-  que no haya desplazamiento horizontal, que el directorio se reorganice y
-  que todos los enlaces tengan foco visible al recorrerlos con Tab.
+  que no haya desplazamiento horizontal y que todos los enlaces tengan foco
+  visible al recorrerlos con Tab.
 
-**Figma:** se revisaron los frames «05 · Perfil público del autor»,
-«13 · Cocinero · Favoritos y compras» y «14 · Cocinero · Mi perfil». El perfil
-público conserva la cabecera con iniciales y texto, sin métricas ni recetas
-atribuidas. Las vistas personales usan el layout público en lugar del panel
+**Figma:** las vistas personales usan el layout público en lugar del panel
 de cocinero: no muestran ajustes de cuenta ni una lista
-de compras. El directorio de autores es una vista nueva.
+de compras. El directorio de autores ficticio fue retirado.
 
 **Verificado:** enlaces de las nuevas vistas, recarga directa, foco visible
 por teclado y ausencia de desplazamiento horizontal a 320, 390, 768 y 1440 px.
@@ -621,7 +613,6 @@ La preparación se muestra como texto, sin HTML, y puede estar vacía.
 Las secciones administrativas de catálogos y recetas consultan la API.
 `demoAdminUsers` se conserva solo para pruebas históricas y no
 alimenta el panel de usuarios. Los datos ficticios no son un respaldo de la API.
-`demoAuthors` sigue alimentando el directorio ficticio.
 `demoCookRecipes`, `src/data/recipes.js` y `src/utils/servings.js` se
 conservan para pruebas históricas y no son datos alternativos si falla la API.
 
