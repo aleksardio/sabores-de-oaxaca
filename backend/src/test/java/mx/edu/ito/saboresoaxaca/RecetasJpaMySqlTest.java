@@ -461,6 +461,58 @@ class RecetasJpaMySqlTest {
             assertEquals(estadoFinal, jdbc.queryForObject("SELECT estado_receta_nuevo FROM auditoria_moderacion WHERE receta_id=?", String.class, opuestasId));
             assertEquals(estadoFinal.equals("PUBLICADA") ? "APROBAR" : "RECHAZAR", jdbc.queryForObject("SELECT accion FROM auditoria_moderacion WHERE receta_id=?", String.class, opuestasId));
             System.out.println("CONCURRENCIA_MODERACION estado=" + estadoFinal + " version=2 auditorias=1");
+
+            assertEquals(201, enviar(client, base + "/auth/registro", "POST", "{\"nombreVisible\":\"Reportante\",\"correo\":\"reportante@ejemplo.invalid\",\"contrasena\":\"Ejemplo1!\"}", null).statusCode());
+            var loginReportante = enviar(client, base + "/auth/login", "POST", "{\"correo\":\"reportante@ejemplo.invalid\",\"contrasena\":\"Ejemplo1!\"}", null);
+            var matcherReporte = java.util.regex.Pattern.compile("\"(?:accessToken|token)\":\"([^\"]+)\"").matcher(loginReportante.body());
+            assertTrue(matcherReporte.find());
+            String reportante = matcherReporte.group(1);
+            String reportar = base + "/recetas/" + ids.get(0) + "/reportes";
+            String motivo = "{\"motivo\":\"Información incorrecta\"}";
+            assertEquals(401, enviar(client, reportar, "POST", motivo, null).statusCode());
+            assertEquals(400, enviar(client, reportar, "POST", "{\"motivo\":\"   \"}", reportante).statusCode());
+            assertEquals(400, enviar(client, reportar, "POST", "{\"motivo\":\"" + "a".repeat(501) + "\"}", reportante).statusCode());
+            assertEquals(403, enviar(client, base + "/recetas/" + adminId + "/reportes", "POST", motivo, revisor).statusCode());
+            assertEquals(403, enviar(client, base + "/moderacion/reportes", "GET", "", reportante).statusCode());
+            var creadoReporte = enviar(client, reportar, "POST", motivo, reportante);
+            assertEquals(201, creadoReporte.statusCode(), creadoReporte.body());
+            Long reporteId = jdbc.queryForObject("SELECT id FROM reportes WHERE receta_id=?", Long.class, ids.get(0));
+            assertEquals(409, enviar(client, reportar, "POST", motivo, reportante).statusCode());
+            var bandeja = enviar(client, base + "/moderacion/reportes?estado=ABIERTO&tamano=1", "GET", "", revisor);
+            assertEquals(200, bandeja.statusCode(), bandeja.body());
+            assertTrue(bandeja.body().contains("Información incorrecta"), bandeja.body());
+            assertEquals(200, enviar(client, base + "/moderacion/reportes/" + reporteId, "GET", "", revisor).statusCode());
+            assertEquals(200, enviar(client, base + "/moderacion/reportes/" + reporteId + "/descartar", "POST", "", revisor).statusCode());
+            assertEquals(409, enviar(client, base + "/moderacion/reportes/" + reporteId + "/descartar", "POST", "", revisor).statusCode());
+            assertEquals(200, get(client, base + "/recetas/" + ids.get(0)).statusCode());
+            assertEquals(201, enviar(client, reportar, "POST", motivo, reportante).statusCode());
+            assertEquals(201, enviar(client, reportar, "POST", motivo, revisor).statusCode());
+            Long bajaReporte = jdbc.queryForObject("SELECT MIN(id) FROM reportes WHERE receta_id=? AND estado='ABIERTO'", Long.class, ids.get(0));
+            var poolReportes=java.util.concurrent.Executors.newFixedThreadPool(2);
+            var inicioReportes=new java.util.concurrent.CountDownLatch(1);
+            try {
+                var uno=poolReportes.submit(() -> { inicioReportes.await(); return enviar(client, base + "/moderacion/reportes/" + bajaReporte + "/dar-baja", "POST", "", revisor); });
+                var dos=poolReportes.submit(() -> { inicioReportes.await(); return enviar(client, base + "/moderacion/reportes/" + bajaReporte + "/dar-baja", "POST", "", revisor); });
+                inicioReportes.countDown();
+                var estadosReporte=List.of(uno.get(30,java.util.concurrent.TimeUnit.SECONDS).statusCode(),dos.get(30,java.util.concurrent.TimeUnit.SECONDS).statusCode());
+                assertTrue(estadosReporte.contains(200) && estadosReporte.contains(409), estadosReporte.toString());
+            } finally { poolReportes.shutdownNow(); }
+            assertEquals(404, get(client, base + "/recetas/" + ids.get(0)).statusCode());
+            assertFalse(get(client, base + "/recetas").body().contains("\"id\":" + ids.get(0) + ",\"titulo\":\"Mole\""));
+            assertEquals(2, jdbc.queryForObject("SELECT COUNT(*) FROM reportes WHERE receta_id=? AND estado='RESUELTO' AND resuelto_en IS NOT NULL", Integer.class, ids.get(0)));
+            assertEquals(3, jdbc.queryForObject("SELECT COUNT(*) FROM auditoria_moderacion WHERE receta_id=? AND reporte_id IS NOT NULL", Integer.class, ids.get(0)));
+            assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM auditoria_administrativa WHERE receta_afectada_id=? AND accion='BAJA_RECETA'", Integer.class, ids.get(0)));
+            var poolDuplicados=java.util.concurrent.Executors.newFixedThreadPool(2);
+            var inicioDuplicados=new java.util.concurrent.CountDownLatch(1);
+            try {
+                String otraRuta=base + "/recetas/" + ids.get(1) + "/reportes";
+                var uno=poolDuplicados.submit(() -> { inicioDuplicados.await(); return enviar(client, otraRuta, "POST", motivo, reportante); });
+                var dos=poolDuplicados.submit(() -> { inicioDuplicados.await(); return enviar(client, otraRuta, "POST", motivo, reportante); });
+                inicioDuplicados.countDown();
+                var codigos=List.of(uno.get(30,java.util.concurrent.TimeUnit.SECONDS).statusCode(),dos.get(30,java.util.concurrent.TimeUnit.SECONDS).statusCode());
+                assertTrue(codigos.contains(201) && codigos.contains(409), codigos.toString());
+                assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM reportes WHERE receta_id=? AND estado='ABIERTO'", Integer.class, ids.get(1)));
+            } finally { poolDuplicados.shutdownNow(); }
         }
     }
     private static java.net.http.HttpResponse<String> get(java.net.http.HttpClient client, String url) throws Exception {
