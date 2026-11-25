@@ -1,0 +1,19 @@
+meta {
+  name: Reportar receta
+  type: http
+  seq: 31
+}
+post {
+  url: {{baseUrl}}/api/v1/recetas/{{recetaPublicadaId}}/reportes
+  body: json
+  auth: bearer
+}
+auth:bearer {
+  token: {{jwt}}
+}
+body:json {
+  {"motivo":"Información incorrecta en esta receta."}
+}
+tests {
+  test("Reporte: 201", function () { expect(res.getStatus()).to.equal(201); });
+}

@@ -1,0 +1,16 @@
+meta {
+  name: Registro inválido
+  type: http
+  seq: 2
+}
+post {
+  url: {{baseUrl}}/api/v1/auth/registro
+  body: json
+  auth: none
+}
+body:json {
+  {"nombreVisible":"","correo":"no-es-correo","contrasena":"x"}
+}
+tests {
+  test("Validación: 400", function () { expect(res.getStatus()).to.equal(400); });
+}

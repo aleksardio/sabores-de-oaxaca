@@ -1,0 +1,19 @@
+meta {
+  name: Crear borrador completo
+  type: http
+  seq: 18
+}
+post {
+  url: {{baseUrl}}/api/v1/mis-recetas
+  body: json
+  auth: bearer
+}
+auth:bearer {
+  token: {{jwtCocinero}}
+}
+body:json {
+  {"titulo":"Receta de prueba","descripcion":"Preparación de prueba","preparacion":"Mezclar y cocinar.","tipo":"COMUN","porcionesBase":4,"categorias":[{{categoriaId}}],"ingredientes":[{"ingredienteId":{{ingredienteId}},"cantidad":1,"unidad":"G","orden":1}],"multimedia":[]}
+}
+tests {
+  test("Borrador: 201", function () { expect(res.getStatus()).to.equal(201); });
+}

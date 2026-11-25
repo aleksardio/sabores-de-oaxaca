@@ -1,0 +1,16 @@
+meta {
+  name: Restablecer deshabilitado
+  type: http
+  seq: 37
+}
+post {
+  url: {{baseUrl}}/api/v1/auth/restablecer-contrasena
+  body: json
+  auth: none
+}
+body:json {
+  {"token":"{{tokenRecuperacion}}","contrasena":"{{contrasenaNueva}}"}
+}
+tests {
+  test("Deshabilitada por defecto: 503", function () { expect(res.getStatus()).to.equal(503); });
+}

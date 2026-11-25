@@ -1,0 +1,16 @@
+meta {
+  name: Subir multimedia sin JWT
+  type: http
+  seq: 30
+}
+post {
+  url: {{baseUrl}}/api/v1/multimedia/uploads
+  body: multipartForm
+  auth: none
+}
+body:multipart-form {
+  archivo: @file({{archivo}})
+}
+tests {
+  test("Sin JWT: 401", function () { expect(res.getStatus()).to.equal(401); });
+}

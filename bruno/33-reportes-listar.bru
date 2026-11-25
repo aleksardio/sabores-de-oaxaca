@@ -1,0 +1,15 @@
+meta {
+  name: Bandeja de reportes
+  type: http
+  seq: 33
+}
+get {
+  url: {{baseUrl}}/api/v1/moderacion/reportes?estado=ABIERTO&pagina=0&tamano=12
+  auth: bearer
+}
+auth:bearer {
+  token: {{jwtModerador}}
+}
+tests {
+  test("Bandeja: 200", function () { expect(res.getStatus()).to.equal(200); });
+}

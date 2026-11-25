@@ -1,0 +1,18 @@
+meta {
+  name: Aprobar receta
+  type: http
+  seq: 25
+}
+post {
+  url: {{baseUrl}}/api/v1/moderacion/recetas/{{recetaPendienteId}}/aprobar
+  auth: bearer
+}
+headers {
+  If-Match: "{{version}}"
+}
+auth:bearer {
+  token: {{jwtModerador}}
+}
+tests {
+  test("Aprobar: 200", function () { expect(res.getStatus()).to.equal(200); });
+}

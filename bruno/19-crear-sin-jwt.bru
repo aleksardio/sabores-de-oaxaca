@@ -1,0 +1,16 @@
+meta {
+  name: Crear receta sin JWT
+  type: http
+  seq: 19
+}
+post {
+  url: {{baseUrl}}/api/v1/mis-recetas
+  body: json
+  auth: none
+}
+body:json {
+  {}
+}
+tests {
+  test("Sin JWT: 401", function () { expect(res.getStatus()).to.equal(401); });
+}

@@ -1,0 +1,12 @@
+meta {
+  name: Detalle de receta pública
+  type: http
+  seq: 17
+}
+get {
+  url: {{baseUrl}}/api/v1/recetas/{{recetaPublicadaId}}
+  auth: none
+}
+tests {
+  test("Detalle: 200", function () { expect(res.getStatus()).to.equal(200); });
+}

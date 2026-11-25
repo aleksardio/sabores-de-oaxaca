@@ -1,0 +1,15 @@
+meta {
+  name: Retirar cocinero
+  type: http
+  seq: 12
+}
+delete {
+  url: {{baseUrl}}/api/v1/admin/usuarios/{{usuarioId}}/roles/cocinero
+  auth: bearer
+}
+auth:bearer {
+  token: {{jwtAdmin}}
+}
+tests {
+  test("Retirar: 204", function () { expect(res.getStatus()).to.equal(204); });
+}

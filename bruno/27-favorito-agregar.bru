@@ -1,0 +1,15 @@
+meta {
+  name: Agregar favorito
+  type: http
+  seq: 27
+}
+post {
+  url: {{baseUrl}}/api/v1/favoritos/{{recetaPublicadaId}}
+  auth: bearer
+}
+auth:bearer {
+  token: {{jwt}}
+}
+tests {
+  test("Favorito: 204", function () { expect(res.getStatus()).to.equal(204); });
+}

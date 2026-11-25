@@ -1,0 +1,19 @@
+meta {
+  name: Subir multimedia
+  type: http
+  seq: 29
+}
+post {
+  url: {{baseUrl}}/api/v1/multimedia/uploads
+  body: multipartForm
+  auth: bearer
+}
+auth:bearer {
+  token: {{jwtCocinero}}
+}
+body:multipart-form {
+  archivo: @file({{archivo}})
+}
+tests {
+  test("Subida: 201", function () { expect(res.getStatus()).to.equal(201); });
+}
