@@ -4,6 +4,7 @@ import FavoriteButton from '../components/FavoriteButton.jsx'
 import FavoritesStatus from '../components/FavoritesStatus.jsx'
 import RecipeCard from '../components/RecipeCard.jsx'
 import { useFavorites } from '../favorites/useFavorites.js'
+import { useRecipeCovers } from '../hooks/useRecipeCovers.js'
 import '../styles/community.css'
 import '../styles/favorites.css'
 
@@ -11,6 +12,7 @@ export default function FavoritesPage() {
   const { user, notice } = useAuth()
   const favorites = useFavorites()
   const recipes = favorites?.error ? null : favorites?.recipes
+  const covers = useRecipeCovers(recipes, user?.id)
 
   return (
     <section className="community-page" aria-labelledby="favorites-title">
@@ -30,7 +32,7 @@ export default function FavoritesPage() {
       {!favorites?.loading && recipes?.length === 0 && <p role="status">Aún no tienes recetas favoritas.</p>}
       {recipes?.length > 0 && (
         <ul className="favorites-grid" aria-label="Recetas favoritas" role="list">
-          {recipes.map((recipe) => <RecipeCard key={recipe.id} recipe={recipe}
+          {recipes.map((recipe) => <RecipeCard key={recipe.id} recipe={recipe} image={covers?.[recipe.id]}
             favoriteAction={<FavoriteButton recipe={recipe} />} />)}
         </ul>
       )}

@@ -1,10 +1,11 @@
 import { useCallback, useRef, useState } from 'react'
-import { Link, useSearchParams } from 'react-router'
+import { Link, useLocation, useSearchParams } from 'react-router'
 import RecipeCard from '../components/RecipeCard.jsx'
 import FavoriteButton from '../components/FavoriteButton.jsx'
 import FavoritesStatus from '../components/FavoritesStatus.jsx'
 import RequestError from '../components/RequestError.jsx'
 import { usePublicRequest } from '../hooks/usePublicRequest.js'
+import { useRecipeCovers } from '../hooks/useRecipeCovers.js'
 import { getCategories, getRecipes, readCatalogFilters, recipeTypes } from '../services/recipesService.js'
 import '../styles/recipes.css'
 
@@ -23,6 +24,7 @@ function CatalogPagination({ page, pageCount, onPageChange }) {
 }
 
 export default function RecipesPage() {
+  const { key: locationKey } = useLocation()
   const [searchParams, setSearchParams] = useSearchParams()
   const { titulo, categoria, tipo, pagina } = readCatalogFilters(searchParams)
   const [search, setSearch] = useState({ title: titulo, draft: titulo })
@@ -71,6 +73,7 @@ export default function RecipesPage() {
   const { contenido, totalElementos, totalPaginas } = recipes.data ?? {}
   const page = (recipes.data?.pagina ?? pagina) + 1
   const outsideCatalog = Boolean(recipes.data && pagina > 0 && page > totalPaginas)
+  const covers = useRecipeCovers(outsideCatalog ? null : contenido, locationKey)
 
   return (
     <section className="catalog" aria-labelledby="catalog-title">
@@ -140,7 +143,7 @@ export default function RecipesPage() {
       ) : contenido?.length ? (
         <>
           <ul className="catalog-grid" role="list">
-            {contenido.map((recipe) => <RecipeCard key={recipe.id} recipe={recipe}
+            {contenido.map((recipe) => <RecipeCard key={recipe.id} recipe={recipe} image={covers?.[recipe.id]}
               favoriteAction={<FavoriteButton recipe={recipe} />} />)}
           </ul>
           {totalPaginas > 1 && <CatalogPagination page={page} pageCount={totalPaginas} onPageChange={changePage} />}

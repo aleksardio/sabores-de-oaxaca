@@ -1,4 +1,4 @@
-import { normalizeRecipeText } from './recipeEditorValidation.js'
+import { maxItems, nextOrder, normalizeRecipeText } from './recipeEditorValidation.js'
 
 export function searchIngredients(catalog, query) {
   const term = normalizeRecipeText(query)
@@ -22,4 +22,12 @@ export function selectIngredient(catalog, rows, rowId, value) {
   const ingredient = catalog?.find(({ id }) => String(id) === value)
   if (!ingredient || rows.some(({ id, ingredientId }) => id !== rowId && Number(ingredientId) === ingredient.id)) return rows
   return rows.map((row) => row.id === rowId ? { ...row, ingredientId: value, name: ingredient.nombre } : row)
+}
+
+export function addIngredient(rows, ingredient, rowId) {
+  if (rows.length >= maxItems.ingredients || rows.some(({ ingredientId }) => Number(ingredientId) === ingredient.id)) return rows
+  return [...rows, {
+    id: rowId, ingredientId: String(ingredient.id), name: ingredient.nombre,
+    quantity: '', unit: 'G', order: nextOrder(rows), note: '',
+  }]
 }

@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import RecipeImage from '../components/RecipeImage.jsx'
+import RecipeVideo from '../components/RecipeVideo.jsx'
 import FavoriteButton from '../components/FavoriteButton.jsx'
 import FavoritesStatus from '../components/FavoritesStatus.jsx'
 import RecipePreparation from '../components/RecipePreparation.jsx'
@@ -83,9 +84,7 @@ export default function RecipeDetailPage() {
           <h2 id="recipe-video-title">Videos</h2>
           <ul>
             {videos.map(({ id: mediaId, url, textoAlternativo }) => (
-              <li key={mediaId}><a href={url} target="_blank" rel="noopener noreferrer">
-                {textoAlternativo?.trim() || 'Ver video'} (abre en otra pestaña)
-              </a></li>
+              <li key={mediaId}><RecipeVideo url={url} label={textoAlternativo} /></li>
             ))}
           </ul>
         </section>

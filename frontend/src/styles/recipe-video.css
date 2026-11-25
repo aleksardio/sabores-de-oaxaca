@@ -1,0 +1,16 @@
+.recipe-video {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.recipe-video video {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  max-height: 360px;
+  object-fit: contain;
+  border-radius: 12px;
+  background: var(--ink);
+}
