@@ -1,0 +1,22 @@
+meta {
+  name: Restaurar receta administrativa
+  type: http
+  seq: 48
+}
+post {
+  url: {{baseUrl}}/api/v1/admin/recetas/{{recetaAdminId}}/restaurar
+  body: json
+  auth: bearer
+}
+headers {
+  If-Match: "{{versionAdmin}}"
+}
+auth:bearer {
+  token: {{jwtAdmin}}
+}
+body:json {
+  {"detalle":"Restauración autorizada en entorno aislado"}
+}
+tests {
+  test("Restauración: 200", function () { expect(res.getStatus()).to.equal(200); });
+}

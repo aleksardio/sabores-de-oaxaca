@@ -1,0 +1,15 @@
+meta {
+  name: Listar recetas administrativas
+  type: http
+  seq: 45
+}
+get {
+  url: {{baseUrl}}/api/v1/admin/recetas?pagina=0&tamano=20
+  auth: bearer
+}
+auth:bearer {
+  token: {{jwtAdmin}}
+}
+tests {
+  test("Listado: 200", function () { expect(res.getStatus()).to.equal(200); });
+}

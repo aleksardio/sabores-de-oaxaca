@@ -39,7 +39,7 @@ Las variables solo se establecen en la sesión actual; al terminar puede retirar
 la contraseña con `Remove-Item Env:DB_PASSWORD`. No incluir contraseñas reales en
 archivos ni comandos versionados. Para otras bases modifica `DB_URL` en la sesión.
 
-`dev` habilita Flyway y usa las migraciones existentes V1–V5; Spring Boot ordena
+`dev` habilita Flyway y usa las migraciones existentes V1–V7; Spring Boot ordena
 su inicialización antes de JPA. Hibernate usa `ddl-auto=validate`, nunca crea ni
 actualiza tablas. Las migraciones necesitan una base seleccionada y permisos
 apropiados; con una base no vacía sin historial Flyway, el arranque falla por
@@ -55,18 +55,14 @@ no verifica la disponibilidad posterior de MySQL.
 
 ## Estado del backend
 
-Están implementadas las entidades JPA `Usuario`, `Rol` y `UsuarioRol`, con sus
-repositorios. `UsuarioRol` usa clave compuesta y relaciones de carga diferida;
-`spring.jpa.open-in-view` está deshabilitado. Hibernate valida los mapeos de las
-entidades existentes, **no las 14 tablas completas** ni todas sus restricciones.
-Las migraciones Flyway son el mecanismo de creación del esquema.
-
-Los endpoints públicos son `GET /api/v1/public/health`, `POST /api/v1/auth/registro`
-y `POST /api/v1/auth/login`. `GET /api/v1/auth/me` requiere Bearer JWT; las demás rutas
-están denegadas; `POST /api/v1/auth/logout` requiere Bearer JWT. Autenticación y
-registro requieren persistencia, no `bootstrap`.
-Quedan pendientes recuperación, recetas y moderación. Contratos:
-[registro](docs/REGISTRO_API.md) y [autenticación](docs/AUTENTICACION_API.md).
+El backend usa controladores REST, DTO, servicios transaccionales y repositorios JPA;
+`spring.jpa.open-in-view` está deshabilitado. Flyway crea el esquema y Hibernate
+valida los mapeos, no todas las restricciones SQL. Autenticación, recetas,
+favoritos, moderación, reportes y administración requieren persistencia, no
+`bootstrap`. El [índice REST](docs/API_REST.md) enlaza los contratos y permisos.
+Recuperación por correo y alertas SMS son opcionales y están deshabilitadas por
+defecto; su configuración se mantiene fuera del repositorio. Véanse
+[correo](docs/CORREO_RECUPERACION.md) y [SMS](docs/SMS_REPORTES_TWILIO.md).
 
 ## Pruebas
 
