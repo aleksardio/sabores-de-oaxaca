@@ -1,0 +1,15 @@
+meta {
+  name: Listar favoritos
+  type: http
+  seq: 26
+}
+get {
+  url: {{baseUrl}}/api/v1/favoritos
+  auth: bearer
+}
+auth:bearer {
+  token: {{jwt}}
+}
+tests {
+  test("Favoritos: 200", function () { expect(res.getStatus()).to.equal(200); });
+}

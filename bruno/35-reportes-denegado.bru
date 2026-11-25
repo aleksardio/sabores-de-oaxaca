@@ -1,0 +1,15 @@
+meta {
+  name: Bandeja sin moderación
+  type: http
+  seq: 35
+}
+get {
+  url: {{baseUrl}}/api/v1/moderacion/reportes
+  auth: bearer
+}
+auth:bearer {
+  token: {{jwt}}
+}
+tests {
+  test("Sin permiso: 403", function () { expect(res.getStatus()).to.equal(403); });
+}

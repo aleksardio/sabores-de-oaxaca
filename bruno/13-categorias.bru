@@ -1,0 +1,12 @@
+meta {
+  name: Categorías públicas
+  type: http
+  seq: 13
+}
+get {
+  url: {{baseUrl}}/api/v1/categorias
+  auth: none
+}
+tests {
+  test("Categorías: 200", function () { expect(res.getStatus()).to.equal(200); });
+}

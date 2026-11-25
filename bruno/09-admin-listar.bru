@@ -1,0 +1,15 @@
+meta {
+  name: Admin listar usuarios
+  type: http
+  seq: 9
+}
+get {
+  url: {{baseUrl}}/api/v1/admin/usuarios?pagina=0&tamano=20
+  auth: bearer
+}
+auth:bearer {
+  token: {{jwtAdmin}}
+}
+tests {
+  test("Usuarios: 200", function () { expect(res.getStatus()).to.equal(200); });
+}

@@ -1,0 +1,12 @@
+meta {
+  name: Ingredientes públicos
+  type: http
+  seq: 14
+}
+get {
+  url: {{baseUrl}}/api/v1/ingredientes
+  auth: none
+}
+tests {
+  test("Ingredientes: 200", function () { expect(res.getStatus()).to.equal(200); });
+}

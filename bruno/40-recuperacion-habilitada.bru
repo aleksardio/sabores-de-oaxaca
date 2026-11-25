@@ -1,0 +1,16 @@
+meta {
+  name: Solicitar recuperación habilitada
+  type: http
+  seq: 40
+}
+post {
+  url: {{baseUrl}}/api/v1/auth/recuperar-contrasena
+  body: json
+  auth: none
+}
+body:json {
+  {"correo":"{{correo}}"}
+}
+tests {
+  test("Respuesta genérica: 200", function () { expect(res.getStatus()).to.equal(200); });
+}

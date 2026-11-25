@@ -1,0 +1,15 @@
+meta {
+  name: Enviar sin If-Match
+  type: http
+  seq: 22
+}
+post {
+  url: {{baseUrl}}/api/v1/mis-recetas/{{recetaId}}/enviar-revision
+  auth: bearer
+}
+auth:bearer {
+  token: {{jwtCocinero}}
+}
+tests {
+  test("Falta If-Match: 400", function () { expect(res.getStatus()).to.equal(400); });
+}

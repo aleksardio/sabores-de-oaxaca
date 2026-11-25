@@ -1,0 +1,22 @@
+meta {
+  name: Rechazar receta
+  type: http
+  seq: 39
+}
+post {
+  url: {{baseUrl}}/api/v1/moderacion/recetas/{{recetaPendienteId}}/rechazar
+  body: json
+  auth: bearer
+}
+headers {
+  If-Match: "{{version}}"
+}
+auth:bearer {
+  token: {{jwtModerador}}
+}
+body:json {
+  {"motivo":"Requiere más detalle."}
+}
+tests {
+  test("Rechazar: 200", function () { expect(res.getStatus()).to.equal(200); });
+}

@@ -1,0 +1,15 @@
+meta {
+  name: Usuarios sin ADMIN
+  type: http
+  seq: 10
+}
+get {
+  url: {{baseUrl}}/api/v1/admin/usuarios
+  auth: bearer
+}
+auth:bearer {
+  token: {{jwt}}
+}
+tests {
+  test("Sin ADMIN: 403", function () { expect(res.getStatus()).to.equal(403); });
+}

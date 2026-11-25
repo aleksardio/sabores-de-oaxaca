@@ -1,0 +1,12 @@
+meta {
+  name: Catálogo filtro inválido
+  type: http
+  seq: 16
+}
+get {
+  url: {{baseUrl}}/api/v1/recetas?pagina=-1
+  auth: none
+}
+tests {
+  test("Página inválida: 400", function () { expect(res.getStatus()).to.equal(400); });
+}

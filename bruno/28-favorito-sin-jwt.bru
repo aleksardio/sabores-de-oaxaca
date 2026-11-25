@@ -1,0 +1,12 @@
+meta {
+  name: Favorito sin JWT
+  type: http
+  seq: 28
+}
+get {
+  url: {{baseUrl}}/api/v1/favoritos
+  auth: none
+}
+tests {
+  test("Sin JWT: 401", function () { expect(res.getStatus()).to.equal(401); });
+}

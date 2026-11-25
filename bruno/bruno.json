@@ -1,0 +1,6 @@
+{
+  "version": "1",
+  "name": "Sabores de Oaxaca",
+  "type": "collection",
+  "ignore": ["node_modules", ".git"]
+}

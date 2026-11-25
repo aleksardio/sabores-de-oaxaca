@@ -1,0 +1,19 @@
+meta {
+  name: Motivo de reporte vacío
+  type: http
+  seq: 32
+}
+post {
+  url: {{baseUrl}}/api/v1/recetas/{{recetaPublicadaId}}/reportes
+  body: json
+  auth: bearer
+}
+auth:bearer {
+  token: {{jwt}}
+}
+body:json {
+  {"motivo":"  "}
+}
+tests {
+  test("Motivo inválido: 400", function () { expect(res.getStatus()).to.equal(400); });
+}

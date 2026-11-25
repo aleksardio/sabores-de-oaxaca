@@ -1,0 +1,12 @@
+meta {
+  name: Logout sin JWT
+  type: http
+  seq: 8
+}
+post {
+  url: {{baseUrl}}/api/v1/auth/logout
+  auth: none
+}
+tests {
+  test("Sin sesión: 401", function () { expect(res.getStatus()).to.equal(401); });
+}

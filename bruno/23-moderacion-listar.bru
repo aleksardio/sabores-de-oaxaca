@@ -1,0 +1,15 @@
+meta {
+  name: Listar pendientes
+  type: http
+  seq: 23
+}
+get {
+  url: {{baseUrl}}/api/v1/moderacion/recetas?pagina=0&tamano=12
+  auth: bearer
+}
+auth:bearer {
+  token: {{jwtModerador}}
+}
+tests {
+  test("Moderación: 200", function () { expect(res.getStatus()).to.equal(200); });
+}

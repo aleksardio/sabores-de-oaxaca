@@ -1,0 +1,15 @@
+meta {
+  name: Asignar cocinero
+  type: http
+  seq: 11
+}
+put {
+  url: {{baseUrl}}/api/v1/admin/usuarios/{{usuarioId}}/roles/cocinero
+  auth: bearer
+}
+auth:bearer {
+  token: {{jwtAdmin}}
+}
+tests {
+  test("Asignar: 204", function () { expect(res.getStatus()).to.equal(204); });
+}

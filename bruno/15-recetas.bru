@@ -1,0 +1,12 @@
+meta {
+  name: Catálogo público
+  type: http
+  seq: 15
+}
+get {
+  url: {{baseUrl}}/api/v1/recetas?pagina=0&tamano=12
+  auth: none
+}
+tests {
+  test("Catálogo: 200", function () { expect(res.getStatus()).to.equal(200); });
+}

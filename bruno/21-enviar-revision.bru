@@ -1,0 +1,18 @@
+meta {
+  name: Enviar a revisión
+  type: http
+  seq: 21
+}
+post {
+  url: {{baseUrl}}/api/v1/mis-recetas/{{recetaId}}/enviar-revision
+  auth: bearer
+}
+headers {
+  If-Match: "{{version}}"
+}
+auth:bearer {
+  token: {{jwtCocinero}}
+}
+tests {
+  test("Enviar: 200", function () { expect(res.getStatus()).to.equal(200); });
+}

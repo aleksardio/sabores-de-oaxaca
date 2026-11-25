@@ -1,0 +1,15 @@
+meta {
+  name: Retirar favorito
+  type: http
+  seq: 43
+}
+delete {
+  url: {{baseUrl}}/api/v1/favoritos/{{recetaPublicadaId}}
+  auth: bearer
+}
+auth:bearer {
+  token: {{jwt}}
+}
+tests {
+  test("Retirar favorito: 204", function () { expect(res.getStatus()).to.equal(204); });
+}

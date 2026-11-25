@@ -1,0 +1,15 @@
+meta {
+  name: Descartar reporte
+  type: http
+  seq: 34
+}
+post {
+  url: {{baseUrl}}/api/v1/moderacion/reportes/{{reporteId}}/descartar
+  auth: bearer
+}
+auth:bearer {
+  token: {{jwtModerador}}
+}
+tests {
+  test("Descartar: 200", function () { expect(res.getStatus()).to.equal(200); });
+}
