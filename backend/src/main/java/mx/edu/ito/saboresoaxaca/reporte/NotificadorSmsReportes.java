@@ -32,6 +32,7 @@ import java.util.concurrent.TimeUnit;
 public class NotificadorSmsReportes {
     private static final Logger LOG = LoggerFactory.getLogger(NotificadorSmsReportes.class);
     private final boolean habilitado;
+    private final boolean modoPrueba;
     private final String cuentaSid;
     private final String token;
     private final String origen;
@@ -50,12 +51,14 @@ public class NotificadorSmsReportes {
 
     public NotificadorSmsReportes(
             @Value("${app.sms.habilitado:false}") boolean habilitado,
+            @Value("${app.sms.modo-prueba:false}") boolean modoPrueba,
             @Value("${app.sms.twilio.account-sid:}") String cuentaSid,
             @Value("${app.sms.twilio.auth-token:}") String token,
             @Value("${app.sms.twilio.from:}") String origen,
             @Value("${app.sms.destino:}") String destino,
             @Value("${app.sms.intervalo-segundos:300}") long intervaloSegundos) {
         this.habilitado = habilitado;
+        this.modoPrueba = modoPrueba;
         this.cuentaSid = cuentaSid.strip();
         this.token = token.strip();
         this.origen = origen.strip();
@@ -91,7 +94,9 @@ public class NotificadorSmsReportes {
 
     private void enviar(ReporteCreadoEvento evento) {
         try {
-            String cuerpo = "Sabores de Oaxaca: nuevo reporte #" + evento.reporteId()
+            // Una cuenta Twilio Trial solo admite identificadores de plantillas predefinidas.
+            String cuerpo = modoPrueba ? "sms_internal_alerts"
+                    : "Sabores de Oaxaca: nuevo reporte #" + evento.reporteId()
                     + " de receta #" + evento.recetaId() + ". Revisa el panel de moderacion.";
             String formulario = campo("To", destino) + "&" + campo("From", origen) + "&" + campo("Body", cuerpo);
             String credenciales = cuentaSid + ":" + token;
