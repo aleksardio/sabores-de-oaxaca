@@ -24,11 +24,11 @@ export default function AdminPanelLayout() {
       title="Panel de administración"
       kicker="Administración"
       navLabel="Panel de administración"
-      notice="La administración de usuarios consulta al servidor. Catálogos y recetas son demostraciones sin cambios reales."
+      notice="Consulta y administra los datos disponibles en el servidor."
     >
       <NavLink to="/admin/usuarios">Usuarios</NavLink>
-      <NavLink to="/admin/catalogos">Catálogos (demo)</NavLink>
-      <NavLink to="/admin/recetas">Recetas (demo)</NavLink>
+      <NavLink to="/admin/catalogos">Catálogos</NavLink>
+      <NavLink to="/admin/recetas">Recetas</NavLink>
       {canModerate(user) && <Link to="/moderador">Panel del moderador</Link>}
       <Link to="/perfil">Mi perfil</Link>
       <Link className="site-button" to="/">Sitio público</Link>

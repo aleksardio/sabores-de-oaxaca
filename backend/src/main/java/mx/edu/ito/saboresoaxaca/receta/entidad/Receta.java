@@ -45,6 +45,11 @@ public class Receta {
         this.eliminadoEn = ahora;
         this.actualizadoEn = ahora;
     }
+    public void restaurarBaja(LocalDateTime ahora) {
+        this.eliminadoEn = null;
+        if ("PUBLICADA".equals(estado)) this.estado = "PENDIENTE";
+        this.actualizadoEn = ahora;
+    }
     public void enviarRevision(LocalDateTime ahora) {
         this.estado = "PENDIENTE";
         this.actualizadoEn = ahora;
