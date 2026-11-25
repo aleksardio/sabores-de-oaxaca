@@ -104,6 +104,11 @@
 
 .mod-justification {
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.mod-card, .mod-facts dd {
+  overflow-wrap: anywhere;
 }
 
 .mod-audit {

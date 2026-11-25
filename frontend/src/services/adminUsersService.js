@@ -1,4 +1,5 @@
 import { adminUserId, adminUserRoles, canAdminister } from '../utils/adminAccess.js'
+import { utcDate } from '../utils/utcDate.js'
 import { ApiError } from './apiClient.js'
 
 export const adminUsersPageSize = 20
@@ -23,12 +24,7 @@ export function adminUsersErrorMessage(error) {
       : error.status >= 500 ? errors[500] : 'El servidor devolvió una respuesta inesperada.')
 }
 
-export function adminRegistrationUtc(value) {
-  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?Z?$/u.test(value)) return null
-  const iso = value.endsWith('Z') ? value : `${value}Z`
-  const timestamp = Date.parse(iso)
-  return Number.isFinite(timestamp) && new Date(timestamp).toISOString().slice(0, 19) === iso.slice(0, 19) ? iso : null
-}
+export const adminRegistrationUtc = utcDate
 
 const isUser = (row) => typeof row?.id === 'number' && adminUserId(row.id) !== null
   && typeof row.nombreVisible === 'string' && typeof row.correo === 'string' && typeof row.activo === 'boolean'

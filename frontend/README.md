@@ -8,7 +8,8 @@ Las ilustraciones se recrean con CSS y las fuentes Fraunces e Inter se cargan
 desde Google Fonts.
 Inicio, el catálogo y el detalle consultan la API pública. El registro, el
 inicio de sesión, el perfil, los favoritos, el panel del cocinero y la
-moderación de recetas también requieren el backend. Reportes y administración
+moderación de recetas y reportes y la administración de usuarios también
+requieren el backend. Los catálogos y recetas del panel de administración
 siguen siendo demostraciones con datos locales.
 
 ## Instalar y ejecutar
@@ -272,10 +273,9 @@ que la receta ya no está disponible para moderación; no revela su estado.
 
 Spring Boot registra el evento en `auditoria_moderacion` dentro de la misma
 transacción que la decisión. React no escribe auditorías, no envía actor,
-autor, estados ni fechas y no muestra historial. Reportes conserva vistas
-de demostración separadas, sin escrituras ni enlaces a recetas reales. No
-se pueden archivar, restaurar, reenviar o editar recetas ni administrar
-usuarios desde moderación. El panel de administración sigue siendo una demo.
+autor, estados ni fechas y no muestra historial. Este flujo de revisión
+editorial es independiente de la bandeja de reportes. No se pueden archivar,
+restaurar, reenviar o editar recetas ni administrar usuarios desde moderación.
 
 **Validación de extremo a extremo** (solo en un entorno autorizado):
 
@@ -302,6 +302,49 @@ Contrato: [MODERACION_API.md](../backend/docs/MODERACION_API.md).
 simulado, se revisaron cola, detalle, confirmaciones, resultados, reintento y
 conflictos a **320, 390, 768 y 1440 px**, sin desplazamiento horizontal.
 La verificación transaccional contra Spring Boot y MySQL queda pendiente.
+
+#### Reportes de recetas
+
+En el detalle público, **Reportar receta** lleva al login con retorno seguro
+si no hay sesión. Cualquier cuenta autenticada puede reportar, sin `COCINERO`,
+salvo la autora de la receta. Solo se reportan recetas visibles. Escribe un
+motivo no vacío de hasta 500 caracteres y confirma el envío. Un `409` indica
+que ya hay un reporte pendiente de esa cuenta para la receta. Si falla la
+conexión, conserva el motivo y no reenvía: el servidor podría haber recibido
+el reporte. Tras un descarte o resolución, se puede volver a reportar si la
+receta sigue visible; no existe una consulta de reportes propios.
+
+| Endpoint bajo `/api/v1` | Operación |
+| --- | --- |
+| `POST /recetas/{id}/reportes` | Envía solo `{"motivo":"…"}`; confirma únicamente tras un `201` válido. |
+| `GET /moderacion/reportes?estado=ABIERTO&pagina=0&tamano=12` | Bandeja para `MODERADOR` o `ADMIN`. El filtro inicial es Abierto; también se puede consultar En revisión, Resuelto, Descartado o todos. La API pagina y filtra; la interfaz muestra las fechas en UTC. |
+| `GET /moderacion/reportes/{id}` | Detalle por ID numérico. Ofrece un enlace a la receta si su detalle público sigue disponible. |
+| `POST /moderacion/reportes/{id}/descartar` | Cierra el reporte pendiente sin modificar la receta. |
+| `POST /moderacion/reportes/{id}/dar-baja` | Baja lógica de la receta y resolución de todos sus reportes pendientes. No borra favoritos, archivos ni otras relaciones. |
+
+Las decisiones solo se ofrecen para reportes Abiertos o En revisión. Tras
+confirmación explícita, el POST no envía cuerpo, justificación ni `If-Match`.
+Un `200` válido actualiza el estado con la respuesta del servidor. Ante `409`,
+fallo de red, `5xx` o respuesta inesperada, se consulta el detalle antes de
+permitir otra decisión, sin repetir el POST. Las escrituras de moderación se
+serializan dentro de la sesión aunque se vuelva a abrir el detalle. El backend
+autoriza y registra la auditoría. Catálogo, detalle público y Favoritos
+reflejan la visibilidad al volver a consultar sus endpoints.
+
+**Para revisar con Aleks:** la antigua demo impedía moderar reportes propios
+o sobre recetas propias. El contrato y el backend de reportes no establecen
+esas restricciones; React no las deduce a partir del nombre visible del
+reportante ni aplica las reglas de revisión editorial a este flujo.
+
+Contrato: [REPORTES_API.md](../backend/docs/REPORTES_API.md).
+La prueba de Chromium [`qa/reports.mjs`](qa/reports.mjs) cubre, con HTTP
+simulado, reportar, descartar, volver a reportar, dar de baja y comprobar
+catálogo, detalle 404 y Favoritos a 320, 390, 768 y 1440 px. Desde `frontend/`,
+ejecuta `npm run build` y `node qa/reports.mjs` con Chrome instalado y
+`PLAYWRIGHT_MODULE` apuntando a `playwright-core/index.mjs`. No usa
+credenciales reales ni envía solicitudes a producción. Queda pendiente
+verificar las transacciones y la auditoría con Spring Boot y MySQL en un
+entorno de pruebas autorizado.
 
 ### Panel de administración
 
@@ -502,7 +545,7 @@ regionales y no consulta recetas. Esto agrega hasta una solicitud por tarjeta
 en cada carga: incluir una portada en el DTO del catálogo sería más eficiente.
 La preparación se muestra como texto, sin HTML, y puede estar vacía.
 
-Reportes y las secciones administrativas de catálogos y recetas conservan datos
+Las secciones administrativas de catálogos y recetas conservan datos
 de demostración. `demoAdminUsers` se conserva solo para pruebas históricas y no
 alimenta el panel de usuarios. Los datos ficticios no son un respaldo de la API.
 `demoAuthors` sigue alimentando el directorio ficticio.
@@ -523,7 +566,7 @@ y otro de más de seis recetas, categorías múltiples, 404 y cantidades ajustad
 ## Comprobaciones locales
 
 ```sh
-npm test         # Incluye autenticación, moderación y administración de usuarios con HTTP simulado
+npm test         # Incluye autenticación, reportes, moderación y administración de usuarios con HTTP simulado
 npm run build    # Genera dist/
 npm run lint     # Revisa el código con ESLint
 npm run preview  # Sirve la compilación localmente después de build

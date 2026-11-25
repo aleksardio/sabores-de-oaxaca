@@ -5,6 +5,7 @@ import RecipeVideo from '../components/RecipeVideo.jsx'
 import FavoriteButton from '../components/FavoriteButton.jsx'
 import FavoritesStatus from '../components/FavoritesStatus.jsx'
 import RecipePreparation from '../components/RecipePreparation.jsx'
+import ReportRecipeAction from '../components/ReportRecipeAction.jsx'
 import RequestError from '../components/RequestError.jsx'
 import ServingsCalculator from '../components/ServingsCalculator.jsx'
 import { usePublicRequest } from '../hooks/usePublicRequest.js'
@@ -71,7 +72,10 @@ export default function RecipeDetailPage() {
             <p className="detail-meta">Categorías: {recipe.categorias.map(({ nombre }) => nombre).join(', ')}</p>
           )}
           <FavoritesStatus />
-          <FavoriteButton recipe={recipe} />
+          <div className="recipe-detail-actions">
+            <FavoriteButton recipe={recipe} />
+            <ReportRecipeAction recipe={recipe} />
+          </div>
         </section>
       </div>
 

@@ -57,7 +57,7 @@ test('solo MODERADOR o ADMIN acceden, sin jerarquía ni consultas privadas desde
 
 test('el retorno del login acepta solo rutas internas del panel', () => {
   for (const url of ['/moderador', '/moderador/recetas?pagina=1&tipo=COMUN', '/moderador/recetas/42#mod-preview',
-    '/moderador/reportes', '/moderador/reportes/REP-002']) assert.equal(getAuthDestination(url), url)
+    '/moderador/reportes', '/moderador/reportes/2']) assert.equal(getAuthDestination(url), url)
   for (const url of ['//example.invalid/moderador', 'https://example.invalid/moderador', '/moderador/../admin',
     '/moderador\\recetas', '/moderador/recetas/%2f42', '/moderador/recetas/42/editar', '/moderador/recetas/0']) {
     assert.equal(getAuthDestination(url), '/perfil')

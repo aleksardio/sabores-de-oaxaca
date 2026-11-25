@@ -23,10 +23,10 @@ export default function ModeratorPanelLayout() {
       title="Panel de moderación"
       kicker="Moderación"
       navLabel="Panel de moderación"
-      notice="Las decisiones sobre recetas pendientes se registran en el servidor. Reportes solo está disponible como demostración."
+      notice="El servidor registra las decisiones de moderación sobre recetas y reportes."
     >
       <NavLink to="/moderador/recetas">Recetas</NavLink>
-      <NavLink to="/moderador/reportes">Reportes (demo)</NavLink>
+      <NavLink to="/moderador/reportes">Reportes</NavLink>
       <Link to="/perfil">Mi perfil</Link>
       <Link className="site-button" to="/">Sitio público</Link>
     </DemoPanelLayout>
