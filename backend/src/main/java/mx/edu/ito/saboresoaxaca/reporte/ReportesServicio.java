@@ -56,16 +56,21 @@ public class ReportesServicio {
         Receta receta=em.find(Receta.class,ids.get(0),LockModeType.PESSIMISTIC_WRITE);
         Reporte reporte=em.find(Reporte.class,id,LockModeType.PESSIMISTIC_WRITE);
         if (reporte==null) throw error(HttpStatus.NOT_FOUND,"Reporte no encontrado");
+        long actor=actor();
+        if (reporte.getReportante().getId().equals(actor) || receta.getAutor().getId().equals(actor))
+            throw error(HttpStatus.FORBIDDEN,"No puede decidir sobre un reporte propio o de su receta");
         if (!pendiente(reporte)) throw error(HttpStatus.CONFLICT,"El reporte ya fue resuelto");
         if (baja && (!"PUBLICADA".equals(receta.getEstado()) || receta.getEliminadoEn()!=null || receta.getAutor().getEliminadoEn()!=null)) throw error(HttpStatus.CONFLICT,"La receta no admite baja");
-        var fecha=LocalDateTime.now(ZoneOffset.UTC); long actor=actor();
+        var fecha=LocalDateTime.now(ZoneOffset.UTC);
         if (baja) {
+            var pendientes=em.createQuery("select p from Reporte p where p.receta.id=:id and p.estado in ('ABIERTO','EN_REVISION') order by p.id",Reporte.class)
+                    .setParameter("id",receta.getId()).setLockMode(LockModeType.PESSIMISTIC_WRITE).getResultList();
+            if (pendientes.stream().anyMatch(p -> p.getReportante().getId().equals(actor)))
+                throw error(HttpStatus.FORBIDDEN,"No puede resolver reportes propios mediante la baja");
             receta.darBaja(fecha);
             em.flush();
             em.createNativeQuery("INSERT INTO auditoria_administrativa(actor_id,accion,receta_afectada_id,detalle,creado_en) VALUES (:actor,'BAJA_RECETA',:receta,:detalle,:fecha)")
                     .setParameter("actor",actor).setParameter("receta",receta.getId()).setParameter("detalle","Baja originada por reporte " + id).setParameter("fecha",fecha).executeUpdate();
-            var pendientes=em.createQuery("select p from Reporte p where p.receta.id=:id and p.estado in ('ABIERTO','EN_REVISION') order by p.id",Reporte.class)
-                    .setParameter("id",receta.getId()).setLockMode(LockModeType.PESSIMISTIC_WRITE).getResultList();
             for (Reporte p : pendientes) transicion(p,"RESUELTO",actor,fecha,p.getId().equals(id) ? "Baja por reporte" : "Resuelto por baja originada por reporte " + id);
         } else transicion(reporte,"DESCARTADO",actor,fecha,"Reporte descartado");
         return dto(reporte);
