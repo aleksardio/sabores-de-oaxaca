@@ -8,6 +8,7 @@ En el entorno **privado** de Spring Boot (systemd/EnvironmentFile, nunca GitHub)
 
 ```dotenv
 SMS_HABILITADO=true
+SMS_MODO_PRUEBA=true
 TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 TWILIO_AUTH_TOKEN=valor_secreto
 TWILIO_SMS_FROM=+1XXXXXXXXXX
@@ -15,7 +16,8 @@ SMS_DESTINO=+52XXXXXXXXXX
 SMS_INTERVALO_SEGUNDOS=300
 ```
 
-- `TWILIO_SMS_FROM`: número Twilio adquirido y habilitado para SMS internacional a México. No todos los números pueden enviar a todos los países. Verificar permisos geográficos y reglas actuales de Twilio.
+- `SMS_MODO_PRUEBA=true`: para cuentas **Trial**, el cuerpo se envía como el identificador predefinido `sms_internal_alerts`; Twilio determina el texto final y **no incluye detalles del reporte**. En una cuenta completa puede fijarse `false` para enviar el texto personalizado.
+- `TWILIO_SMS_FROM`: en Trial, el número emisor que aparece en **Try out SMS** para ese destinatario; después de actualizar, un número propio habilitado para SMS a México. No todos los números pueden enviar a todos los países. Verificar las reglas actuales.
 - `SMS_DESTINO`: teléfono autorizado para recibir avisos, en formato E.164 (México: `+52` y 10 dígitos).
 - En cuentas trial de Twilio podrían requerirse números de destinatario previamente verificados y otras restricciones.
 - Nunca pegar tokens reales en commits, conversaciones, capturas o comandos con eco.
@@ -24,6 +26,8 @@ SMS_INTERVALO_SEGUNDOS=300
 - Guardar un teléfono real únicamente con autorización del destinatario.
 
 ## Disparador
+
+En Trial, el mensaje recibido será el ejemplo de alertas internas que proporciona Twilio, no el texto personalizado de Sabores de Oaxaca.
 
 Al crear correctamente un reporte nuevo mediante `POST /api/v1/recetas/{id}/reportes`, Spring emite `ReporteCreadoEvento`. Un listener `AFTER_COMMIT` agenda un único SMS breve al destinatario configurado. No envía el texto del reporte ni el nombre del reportante. Las peticiones duplicadas que responden 409 no generan un evento nuevo. No se notifica si la transacción falla.
 
