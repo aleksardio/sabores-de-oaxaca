@@ -19,7 +19,7 @@ export class ApiError extends Error {
   }
 }
 
-export async function apiRequest(path, { method = 'GET', body, token, signal, errors, expected = 200, ifMatch } = {}) {
+export async function apiRequest(path, { method = 'GET', body, token, signal, errors, expected = 200, ifMatch, badRequest } = {}) {
   const headers = { Accept: 'application/json' }
   const multipart = typeof FormData !== 'undefined' && body instanceof FormData
   if (body !== undefined && !multipart) headers['Content-Type'] = 'application/json'
@@ -62,6 +62,7 @@ export async function apiRequest(path, { method = 'GET', body, token, signal, er
 
   const fields = {}
   if (response.status === 400) {
+    if (badRequest) throw badRequest(data)
     for (const [source, target] of Object.entries(fieldNames)) {
       const message = data?.campos?.[source]
       if (typeof message === 'string' && message) fields[target] = message

@@ -30,6 +30,30 @@ const text = (page, value) => page.getByText(value, { exact: true }).waitFor()
 const noOverflow = async (page, width) => assert.equal(await page.evaluate(() =>
   document.documentElement.scrollWidth <= window.innerWidth), true, `Sin desbordamiento a ${width} px`)
 
+async function checkPrimaryButton(locator, label, width) {
+  await locator.waitFor({ state: 'visible' })
+  const { background, textColor, clay, contrast } = await locator.evaluate((element) => {
+    const { backgroundColor: background, color: textColor } = getComputedStyle(element)
+    const swatch = document.createElement('span')
+    swatch.style.color = 'var(--clay)'
+    element.append(swatch)
+    const clay = getComputedStyle(swatch).color
+    swatch.remove()
+
+    const luminance = (color) => color.match(/\d+/g).slice(0, 3).reduce((total, channel, index) => {
+      const srgb = Number(channel) / 255
+      const linear = srgb <= 0.04045 ? srgb / 12.92 : ((srgb + 0.055) / 1.055) ** 2.4
+      return total + linear * [0.2126, 0.7152, 0.0722][index]
+    }, 0)
+    const lightness = [luminance(background), luminance(textColor)]
+    const contrast = (Math.max(...lightness) + 0.05) / (Math.min(...lightness) + 0.05)
+    return { background, textColor, clay, contrast }
+  })
+  assert.equal(background, clay, `${label}: fondo arcilla a ${width} px`)
+  assert.equal(textColor, 'rgb(255, 255, 255)', `${label}: texto blanco a ${width} px`)
+  assert.ok(contrast >= 4.5, `${label}: contraste ${contrast.toFixed(2)}:1 a ${width} px`)
+}
+
 async function login(page, account) {
   await heading(page, 'Bienvenido de nuevo')
   await page.getByLabel('Correo electrónico').fill(account.correo)
@@ -47,6 +71,8 @@ async function scenario(browser, width) {
   let publicRecipe = true
   let uncertainCreation = false
   let listFail = false
+  const firstPost = Promise.withResolvers()
+  const releaseFirstPost = Promise.withResolvers()
   const pending = (row) => ['ABIERTO', 'EN_REVISION'].includes(row.estado)
   const postCount = () => calls.filter(({ path, method }) => path === '/recetas/12/reportes' && method === 'POST').length
   context.on('page', (page) => page.on('pageerror', (error) => errors.push(error.message)))
@@ -91,6 +117,10 @@ async function scenario(browser, width) {
         errors.push('Cuerpo de creación no válido')
         return send(400)
       }
+      if (postCount() === 1) {
+        firstPost.resolve(motivo)
+        await releaseFirstPost.promise
+      }
       const row = { id: 7 + reports.length, recetaId: 12, motivo, estado: 'ABIERTO', creadoEn: date }
       reports.push({ ...row, titulo: recipe.titulo, reportante: account.nombreVisible, resueltoEn: null })
       return send(201, row)
@@ -133,25 +163,51 @@ async function scenario(browser, width) {
     await login(reader, accounts.reader)
     await reader.waitForURL('**/recetas/12')
     const field = reader.getByLabel('Motivo del reporte')
+    const review = button(reader, 'Revisar envío')
+    const confirm = button(reader, 'Confirmar envío')
     await button(reader, 'Reportar receta').click()
-    await button(reader, 'Revisar envío').click()
+    await checkPrimaryButton(review, 'Revisar envío', width)
+    await noOverflow(reader, width)
+    await review.click()
     await text(reader, 'Escribe el motivo del reporte.')
     assert.equal(await field.getAttribute('aria-invalid'), 'true')
     await field.fill('  ')
-    await button(reader, 'Revisar envío').click()
+    await review.click()
     await text(reader, 'Escribe el motivo del reporte.')
+    assert.equal(await confirm.count(), 0)
+    assert.equal(postCount(), 0)
     await field.fill(reason)
     await text(reader, `${reason.length} de 500 caracteres`)
-    await button(reader, 'Revisar envío').click()
+    await review.click()
     await heading(reader, '¿Enviar este reporte a moderación?')
+    await checkPrimaryButton(confirm, 'Confirmar envío', width)
     await noOverflow(reader, width)
+    assert.equal(postCount(), 0)
+    await button(reader, 'Volver a editar').click()
+    await review.waitFor({ state: 'visible' })
+    assert.equal(await field.inputValue(), reason)
+    assert.equal(await field.getAttribute('readonly'), null)
+    assert.equal(postCount(), 0)
+    await review.click()
     await button(reader, 'Cancelar reporte').click()
+    assert.equal(await field.count(), 0)
     assert.equal(postCount(), 0)
     await button(reader, 'Reportar receta').click()
+    assert.equal(await field.inputValue(), '')
     await field.fill(reason)
-    await button(reader, 'Revisar envío').click()
-    await button(reader, 'Confirmar envío').click()
+    await review.click()
+    assert.equal(postCount(), 0)
+    await confirm.evaluate((element) => {
+      element.click()
+      element.click()
+    })
+    await text(reader, 'Enviando reporte…')
+    assert.equal(await firstPost.promise, reason)
+    assert.equal(postCount(), 1)
+    releaseFirstPost.resolve()
     await text(reader, 'Reporte enviado correctamente.')
+    assert.equal(postCount(), 1)
+    await noOverflow(reader, width)
     await button(reader, 'Reportar receta').click()
     await field.fill('Intento duplicado')
     await button(reader, 'Revisar envío').click()
@@ -233,8 +289,9 @@ async function scenario(browser, width) {
     assert.equal(calls.filter(({ path }) => path === moderation).every(({ searchParams }) =>
       searchParams.get('tamano') === '12' && searchParams.get('pagina') === '0'), true)
     assert.deepEqual(errors, [])
-    console.log(`Chromium ${width}px: reporte, duplicado, descarte, reenvío explícito, baja, catálogo y favoritos verificados.`)
+    console.log(`Chromium ${width}px: botones visibles con contraste, reporte sin envíos duplicados, descarte, baja, catálogo y favoritos verificados.`)
   } finally {
+    releaseFirstPost.resolve()
     await context.close()
   }
 }

@@ -256,3 +256,9 @@
 .recipe-report form {
   margin-top: 0.75rem;
 }
+
+.recipe-report .site-button.cook-primary {
+  background: var(--clay);
+  border-color: transparent;
+  color: #fff;
+}

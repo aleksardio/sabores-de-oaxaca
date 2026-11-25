@@ -68,7 +68,8 @@ que la sesión no es válida. Un 403 es falta de autorización, no un 401.
 | `/favoritos` | Favoritos personales de la API; carga, vacío, reintento y eliminación. Para visitantes, enlace a login con retorno y al catálogo. |
 | `/login` | Acceso con correo y contraseña, mostrar u ocultar contraseña y enlaces a alta y recuperación. |
 | `/registro` | Alta con nombre visible, correo, contraseña y confirmación. |
-| `/recuperar-contrasena` | Aviso de función no disponible y enlace de regreso al login; no se envía correo. |
+| `/recuperar-contrasena` | Solicitud por correo con respuesta genérica; no confirma ni envío ni entrega. |
+| `/restablecer-contrasena` | Nueva contraseña desde un enlace con fragmento válido; sin el enlace, ofrece volver a abrirlo o solicitar otro. |
 | `/no-existe` | La página de ruta desconocida y el enlace al inicio. |
 
 Prueba también recargar directamente un detalle y navegar con una ventana
@@ -339,7 +340,13 @@ reportante ni aplica las reglas de revisión editorial a este flujo.
 Contrato: [REPORTES_API.md](../backend/docs/REPORTES_API.md).
 La prueba de Chromium [`qa/reports.mjs`](qa/reports.mjs) cubre, con HTTP
 simulado, reportar, descartar, volver a reportar, dar de baja y comprobar
-catálogo, detalle 404 y Favoritos a 320, 390, 768 y 1440 px. Desde `frontend/`,
+catálogo, detalle 404 y Favoritos a 320, 390, 768 y 1440 px. En el detalle
+público, **Revisar envío** y **Confirmar envío** usan el fondo arcilla del
+sitio sin depender del panel de cocinero. La prueba comprueba su visibilidad,
+el fondo calculado, el contraste mínimo de 4.5:1 y que el formulario no
+desborde. También verifica que no haya POST al validar, volver a editar o
+cancelar, y que una doble activación de la confirmación solo produzca un POST.
+Desde `frontend/`,
 ejecuta `npm run build` y `node qa/reports.mjs` con Chrome instalado y
 `PLAYWRIGHT_MODULE` apuntando a `playwright-core/index.mjs`. No usa
 credenciales reales ni envía solicitudes a producción. Queda pendiente
@@ -460,7 +467,7 @@ la integración de perfiles de autores quedan fuera de este módulo.
 
 ### Formularios de autenticación
 
-Las tres rutas usan un layout propio inspirado en los frames 06, 07 y 08
+Las rutas de autenticación usan un layout propio inspirado en los frames 06, 07 y 08
 de Figma, sin la cabecera ni el pie públicos. En pantallas estrechas el
 panel de marca se compacta y el formulario queda en una columna.
 
@@ -494,6 +501,68 @@ Tab, foco visible, validación local, mensajes de error, botones deshabilitados
 durante el envío, pérdida de sesión al recargar y apertura de rutas públicas
 y de los tres paneles. Queda por repetir el flujo completo contra Spring Boot
 con MySQL y el perfil `dev`.
+
+#### Recuperación y restablecimiento de contraseña
+
+**La recuperación está deshabilitada actualmente en el backend porque no se
+ha verificado el transporte SMTP.** El frontend implementa el
+[contrato del PR #42](../backend/docs/RECUPERACION_CONTRASENA_API.md), pero
+las pruebas con HTTP simulado no comprueban el envío ni la entrega de correos
+y no demuestran que el flujo completo funcione en producción.
+
+| Ruta | POST público del mismo origen | Cuerpo JSON |
+| --- | --- | --- |
+| `/recuperar-contrasena` | `/api/v1/auth/recuperar-contrasena` | `{"correo":"persona@ejemplo.invalid"}` |
+| `/restablecer-contrasena` | `/api/v1/auth/restablecer-contrasena` | `{"token":"…","contrasena":"…"}` |
+
+- **Solicitud:** exige correo con formato válido y hasta 254 caracteres,
+  normalizado como en Java (`strip` y minúsculas). El `200` con el mensaje
+  esperado no distingue entre cuentas existentes, inexistentes y desactivadas.
+  La entrega depende de la disponibilidad del servicio de correo.
+- **Restablecimiento:** reutiliza las reglas de registro: 8–72 unidades
+  UTF-16 (la longitud de Java), hasta 72 bytes UTF-8, mayúscula y dígito
+  ASCII, y un carácter que no sea letra, número ni espacio según la expresión
+  del backend. La confirmación debe coincidir exactamente; no se transmite
+  ni se recortan las contraseñas.
+- **Enlace:** solo se acepta `#token=…` con exactamente 43 caracteres
+  Base64URL y sin parámetros adicionales. El historial elimina el
+  fragmento con `replaceState` antes de entregar la ubicación a React
+  Router, también en navegaciones posteriores. Las claves aleatorias de 128
+  bits no se reinician al recargar y no contienen el token. El token vive
+  solo en memoria. Al salir se descarta; si el navegador congela el
+  documento en BFCache, también se desmontan el formulario y el resultado
+  anterior. Al recargar o regresar por el historial hay que abrir el
+  enlace original o solicitar otro, sin repetir el POST.
+  El backend decide la validez, el consumo y el vencimiento del token
+  (20 minutos desde la emisión, sin contador local).
+- **Respuesta:** `429` pide esperar sin dar una hora de desbloqueo. `503`
+  informa indisponibilidad temporal y permite intentar manualmente después,
+  sin confirmar el envío ni invalidar el enlace. Si no se puede confirmar
+  el restablecimiento (red, `500` o respuesta inesperada), se recomienda
+  intentar iniciar sesión con la nueva contraseña o solicitar otro enlace.
+  No hay reintentos automáticos. Los POST omiten JWT y cookies, no usan caché
+  y requieren HTTPS fuera del entorno local de bucle invertido.
+- **Sesión:** tras el `200` válido se descartan el token y los campos de
+  contraseña. Solo se cierra en este navegador la sesión que estaba activa
+  al enviar, si sigue siendo la misma. No se llama a `/logout` ni se inicia
+  sesión automáticamente: la cuenta abierta podría ser distinta. El
+  backend invalida los JWT de la cuenta restablecida.
+
+Desde `frontend/`, ejecuta `npm test` para las pruebas automatizadas. Para
+repetir la verificación en Chromium, ejecuta `npm run build` y
+`node qa/password-recovery.mjs` con Chrome instalado y `PLAYWRIGHT_MODULE`
+apuntando a `playwright-core/index.mjs`. El script levanta servidores locales,
+intercepta toda la API y bloquea peticiones a otros orígenes. Solo usa datos
+ficticios; no envía correos ni contacta producción. Comprueba teclado, foco,
+contraste y ausencia de desbordamiento a 320, 390, 768 y 1440 px, y repite
+el flujo con `StrictMode` en desarrollo. Además de simular `pagehide` y
+`pageshow` para probar cada defensa por separado, el script habilita BFCache
+en Chromium y comprueba una restauración real: exige eventos del navegador
+con `persisted=true` y verifica que se restaure el mismo documento, tanto
+desde un formulario con datos como después de un éxito. También comprueba
+Atrás y Adelante, enlaces directos, filtros del catálogo y el retorno al
+destino exacto después del login. Las respuestas HTTP siguen siendo simuladas
+en todas estas comprobaciones.
 
 ### Recetario público
 

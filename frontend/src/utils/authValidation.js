@@ -1,9 +1,16 @@
 // Validación de formato para una sola dirección, sin comprobar su existencia.
 const emailPattern = /^[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*$/i
 const encoder = new TextEncoder()
+// Java Pattern usa \s ASCII sin UNICODE_CHARACTER_CLASS; \p{L} y \p{N} siguen siendo Unicode.
+const specialCharacter = /[^\p{L}\p{N}\t\n\v\f\r ]/u
 
-function addEmailError(errors, values) {
-  const email = String(values.get('email') ?? '').trim()
+export function normalizeRecoveryEmail(email) {
+  // String.strip() de Java usa Character.isWhitespace, no el conjunto de JS trim().
+  // eslint-disable-next-line no-control-regex
+  return String(email ?? '').replace(/^[\t-\r\u001c-\u0020\u1680\u2000-\u2006\u2008-\u200a\u2028\u2029\u205f\u3000]+|[\t-\r\u001c-\u0020\u1680\u2000-\u2006\u2008-\u200a\u2028\u2029\u205f\u3000]+$/gu, '').toLowerCase()
+}
+
+function addEmailError(errors, email) {
   if (!email) {
     errors.email = 'Escribe tu correo electrónico.'
   } else if (email.length > 254) {
@@ -23,15 +30,35 @@ function addPasswordError(errors, values, registration = false) {
       : 'La contraseña debe tener como máximo 72 caracteres.'
   } else if (encoder.encode(password).length > 72) {
     errors.password = 'La contraseña no puede superar 72 bytes en UTF-8.'
-  } else if (registration && (!/[A-Z]/.test(password) || !/[0-9]/.test(password) || !/[^\p{L}\p{N}\s]/u.test(password))) {
+  } else if (registration && (!/[A-Z]/.test(password) || !/[0-9]/.test(password) || !specialCharacter.test(password))) {
     errors.password = 'Incluye una mayúscula de A a Z, un número y un carácter especial.'
   }
 }
 
 export function validateLogin(values) {
   const errors = {}
-  addEmailError(errors, values)
+  addEmailError(errors, String(values.get('email') ?? '').trim())
   addPasswordError(errors, values)
+  return errors
+}
+
+export function validateRecoveryEmail(values) {
+  const errors = {}
+  addEmailError(errors, normalizeRecoveryEmail(values.get('email')))
+  return errors
+}
+
+export function validateNewPassword(values) {
+  const errors = {}
+  addPasswordError(errors, values, true)
+
+  const confirmation = values.get('confirmation')
+  if (!confirmation) {
+    errors.confirmation = 'Confirma tu contraseña.'
+  } else if (values.get('password') && confirmation !== values.get('password')) {
+    errors.confirmation = 'Las contraseñas no coinciden.'
+  }
+
   return errors
 }
 
@@ -44,15 +71,6 @@ export function validateRegistration(values) {
     errors.displayName = 'El nombre visible debe tener como máximo 100 caracteres.'
   }
 
-  addEmailError(errors, values)
-  addPasswordError(errors, values, true)
-
-  const confirmation = values.get('confirmation')
-  if (!confirmation) {
-    errors.confirmation = 'Confirma tu contraseña.'
-  } else if (values.get('password') && confirmation !== values.get('password')) {
-    errors.confirmation = 'Las contraseñas no coinciden.'
-  }
-
-  return errors
+  addEmailError(errors, String(values.get('email') ?? '').trim())
+  return { ...errors, ...validateNewPassword(values) }
 }
