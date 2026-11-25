@@ -42,6 +42,7 @@ class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/v1/mis-recetas", "/api/v1/mis-recetas/{id}").authenticated()
                 .requestMatchers("/api/v1/admin/usuarios", "/api/v1/admin/usuarios/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/v1/mis-recetas").authenticated()
+                .requestMatchers(HttpMethod.POST, "/api/v1/multimedia/uploads").hasRole("COCINERO")
                 .requestMatchers(HttpMethod.PUT, "/api/v1/mis-recetas/{id}").authenticated()
                 .requestMatchers(HttpMethod.DELETE, "/api/v1/mis-recetas/{id}").authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/v1/mis-recetas/{id}/enviar-revision").authenticated()

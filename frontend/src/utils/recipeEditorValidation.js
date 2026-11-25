@@ -18,6 +18,17 @@ export function changeIngredientUnit(ingredient, unit) {
 export const positiveInteger = (value, max = Number.MAX_SAFE_INTEGER) =>
   /^\d+$/.test(value) && Number(value) > 0 && Number(value) <= max
 
+export function nextOrder(rows) {
+  const used = new Set(rows.map(({ order }) => Number(order)))
+  let order = 1
+  while (used.has(order)) order++
+  const last = Math.max(0, ...rows.filter((row) => positiveInteger(row.order, 2147483647)).map((row) => Number(row.order)))
+  return String(last < 2147483647 ? last + 1 : order)
+}
+
+export const pendingMediaMessage = 'Sube o quita los archivos pendientes antes de guardar o enviar a revisión.'
+export const hasPendingMedia = (draft) => draft.multimedia?.some((row) => Boolean(row.local)) ?? false
+
 export function isHttpsMediaUrl(value) {
   if (typeof value !== 'string' || value.length > 2048 || !/^https:\/\/[^/\\]/.test(value)
     || /[\s\\<>"{}|^`]|%(?![\da-f]{2})/iu.test(value)) return false
@@ -77,11 +88,12 @@ export function validateRecipeDraft(recipe) {
   })
 
   const mediaOrders = new Set()
-  if (Array.isArray(recipe.multimedia)) recipe.multimedia.forEach(({ id, type, url, alt, order }) => {
+  if (hasPendingMedia(recipe)) errors.multimedia ??= pendingMediaMessage
+  if (Array.isArray(recipe.multimedia)) recipe.multimedia.forEach(({ id, type, url, alt, order, local }) => {
     const prefix = `media-${id}`
     uniquePositive(order, mediaOrders, `${prefix}-order`, 'Orden', javaIntMax)
     if (!Object.hasOwn(mediaTypes, type)) errors[`${prefix}-type`] = 'Selecciona Imagen o Video.'
-    if (!isHttpsMediaUrl(url)) errors[`${prefix}-url`] = 'Escribe una URL HTTPS válida de hasta 2048 caracteres, sin credenciales.'
+    if (!local && !isHttpsMediaUrl(url)) errors[`${prefix}-url`] = 'La referencia debe tener una URL HTTPS válida de hasta 2048 caracteres, sin credenciales.'
     if (alt.length > 255) errors[`${prefix}-alt`] = 'El texto alternativo admite hasta 255 caracteres.'
   })
   return errors
@@ -110,7 +122,7 @@ export function draftFromDetail(recipe) {
   }
 }
 
-export function toRecipeBody(draft) {
+function recipeBodyFields(draft) {
   return {
     titulo: draft.title, descripcion: draft.description, preparacion: draft.preparation, tipo: draft.type,
     porcionesBase: Number(draft.baseServings), categorias: draft.categories.map(({ id }) => Number(id)),
@@ -122,4 +134,17 @@ export function toRecipeBody(draft) {
       tipo: row.type, url: row.url, textoAlternativo: row.alt || null, orden: Number(row.order),
     })),
   }
+}
+
+export function toRecipeBody(draft) {
+  if (hasPendingMedia(draft)) throw new Error(pendingMediaMessage)
+  if (draft.multimedia.some(({ url }) => !isHttpsMediaUrl(url))) throw new Error('Hay referencias multimedia sin URL HTTPS válida.')
+  return recipeBodyFields(draft)
+}
+
+export function changedRecipeBody(draft, baseline) {
+  const body = toRecipeBody(draft)
+  // El detalle anterior puede contener referencias antiguas inválidas: solo se lee para comparar.
+  if (draft === baseline || JSON.stringify(body) === JSON.stringify(recipeBodyFields(baseline))) return null
+  return body
 }
