@@ -57,6 +57,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /** Requiere un esquema local dedicado y vacío; nunca usa bootstrap ni Flyway clean. */
 @EnabledIfSystemProperty(named = "jpa.mysql.it", matches = "true")
 class IdentidadJpaMySqlTest {
+    private static final org.springframework.mail.javamail.JavaMailSender correoSimulado = org.mockito.Mockito.mock(org.springframework.mail.javamail.JavaMailSender.class);
     private static ConfigurableApplicationContext context;
     private static TransactionTemplate tx;
     private static EntityManager em;
@@ -97,12 +98,14 @@ class IdentidadJpaMySqlTest {
         // Las propiedades de mayor precedencia evitan usar DB_* o perfiles externos accidentalmente.
         claveJwt = new byte[64];
         new SecureRandom().nextBytes(claveJwt);
-        context = new SpringApplicationBuilder(SaboresDeOaxacaApiApplication.class).run(
+        context = new SpringApplicationBuilder(SaboresDeOaxacaApiApplication.class)
+                .initializers(c -> c.getBeanFactory().registerSingleton("correoSimuladoPrueba", correoSimulado)).run(
                 "--spring.profiles.active=dev", "--server.port=0",
                 "--JWT_SECRET_BASE64=" + Base64.getEncoder().encodeToString(claveJwt),
                 "--spring.datasource.url=" + url, "--spring.datasource.username=" + user,
                 "--spring.datasource.password=" + password, "--spring.flyway.enabled=true",
-                "--spring.jpa.hibernate.ddl-auto=validate", "--spring.flyway.clean-disabled=true");
+                "--spring.jpa.hibernate.ddl-auto=validate", "--spring.flyway.clean-disabled=true",
+                "--app.recuperacion.remitente=pruebas@ejemplo.invalid", "--app.recuperacion.habilitada=true");
         tx = new TransactionTemplate(context.getBean(PlatformTransactionManager.class));
         em = context.getBean(EntityManager.class);
         usuarios = context.getBean(UsuarioRepositorio.class);
@@ -378,6 +381,69 @@ class IdentidadJpaMySqlTest {
         assertEquals(1, java.util.stream.Stream.of(a.join().statusCode(), b.join().statusCode()).filter(s -> s == 204).count());
         assertTrue(java.util.stream.Stream.of(a.join().statusCode(), b.join().statusCode()).anyMatch(s -> s == 401 || s == 409));
         assertEquals(2L, jdbc.queryForObject("SELECT version_tokens FROM usuarios WHERE id=?", Long.class, id));
+    }
+
+    @Test
+    void recuperacionConCorreoSimuladoYMySql() throws Exception {
+        int port=((WebServerApplicationContext) context).getWebServer().getPort();
+        String base="http://127.0.0.1:"+port+"/api/v1/auth/";
+        HttpClient cliente=HttpClient.newHttpClient();
+        JdbcTemplate jdbc=context.getBean(JdbcTemplate.class);
+        assertEquals(201,enviar(cliente,base+"registro","{\"nombreVisible\":\"Recuperar\",\"correo\":\"recuperar@ejemplo.invalid\",\"contrasena\":\"Ejemplo1!\"}",null).statusCode());
+        var deshabilitado=new mx.edu.ito.saboresoaxaca.auth.recuperacion.RecuperacionServicio(em,context.getBean(PlatformTransactionManager.class),context.getBean(PasswordEncoder.class),correoSimulado,"pruebas@ejemplo.invalid",false);
+        try {
+            assertEquals(503,assertThrows(org.springframework.web.server.ResponseStatusException.class,()->deshabilitado.solicitar("recuperar@ejemplo.invalid")).getStatusCode().value());
+            assertEquals(0,jdbc.queryForObject("SELECT COUNT(*) FROM recuperaciones_contrasena WHERE usuario_id=(SELECT id FROM usuarios WHERE correo='recuperar@ejemplo.invalid')",Integer.class));
+        } finally { deshabilitado.cerrar(); }
+        String jwt=extraerToken(enviar(cliente,base+"login","{\"correo\":\"recuperar@ejemplo.invalid\",\"contrasena\":\"Ejemplo1!\"}",null).body());
+        var existente=enviar(cliente,base+"recuperar-contrasena","{\"correo\":\"recuperar@ejemplo.invalid\"}",null);
+        var inexistente=enviar(cliente,base+"recuperar-contrasena","{\"correo\":\"noexiste@ejemplo.invalid\"}",null);
+        assertEquals(200,existente.statusCode()); assertEquals(existente.body(),inexistente.body());
+        var captor=org.mockito.ArgumentCaptor.forClass(org.springframework.mail.SimpleMailMessage.class);
+        org.mockito.Mockito.verify(correoSimulado,org.mockito.Mockito.timeout(10000).times(1)).send(captor.capture());
+        var correo=captor.getValue();
+        assertEquals("recuperar@ejemplo.invalid",correo.getTo()[0]);
+        var matcher=java.util.regex.Pattern.compile("https://saboresdeoaxaca\\.food/restablecer-contrasena#token=([A-Za-z0-9_-]{43})").matcher(correo.getText());
+        assertTrue(matcher.find()); String token=matcher.group(1);
+        assertFalse(existente.body().contains(token));
+        Long id=jdbc.queryForObject("SELECT id FROM usuarios WHERE correo='recuperar@ejemplo.invalid'",Long.class);
+        byte[] hash=java.security.MessageDigest.getInstance("SHA-256").digest(token.getBytes(java.nio.charset.StandardCharsets.US_ASCII));
+        assertArrayEquals(hash,jdbc.queryForObject("SELECT token_hash FROM recuperaciones_contrasena WHERE usuario_id=?",byte[].class,id));
+        jdbc.update("UPDATE recuperaciones_contrasena SET creado_en=DATE_SUB(NOW(6),INTERVAL 2 MINUTE) WHERE usuario_id=?",id);
+        context.getBean(mx.edu.ito.saboresoaxaca.auth.recuperacion.RecuperacionServicio.class).solicitar("recuperar@ejemplo.invalid");
+        var captorSegundo=org.mockito.ArgumentCaptor.forClass(org.springframework.mail.SimpleMailMessage.class);
+        org.mockito.Mockito.verify(correoSimulado,org.mockito.Mockito.timeout(10000).times(2)).send(captorSegundo.capture());
+        var segundoMatcher=java.util.regex.Pattern.compile("#token=([A-Za-z0-9_-]{43})").matcher(captorSegundo.getAllValues().get(1).getText());
+        assertTrue(segundoMatcher.find());
+        token=segundoMatcher.group(1);
+        assertEquals(1,jdbc.queryForObject("SELECT COUNT(*) FROM recuperaciones_contrasena WHERE usuario_id=? AND invalidado_en IS NOT NULL",Integer.class,id));
+        String prefijo="{\"token\":\""+token+"\",\"contrasena\":\"";
+        assertEquals(400,enviar(cliente,base+"restablecer-contrasena",prefijo+"debil\"}",null).statusCode());
+        String alterado=(token.charAt(0)=='A' ? "B" : "A")+token.substring(1);
+        assertEquals(400,enviar(cliente,base+"restablecer-contrasena","{\"token\":\""+alterado+"\",\"contrasena\":\"NuevaClave1!\"}",null).statusCode());
+        String expirado=Base64.getUrlEncoder().withoutPadding().encodeToString(new byte[32]);
+        byte[] hashExpirado=java.security.MessageDigest.getInstance("SHA-256").digest(expirado.getBytes(java.nio.charset.StandardCharsets.US_ASCII));
+        jdbc.update("INSERT INTO recuperaciones_contrasena(usuario_id,token_hash,creado_en,expira_en) VALUES (?,?,DATE_SUB(NOW(6),INTERVAL 30 MINUTE),DATE_SUB(NOW(6),INTERVAL 1 MINUTE))",id,hashExpirado);
+        assertEquals(400,enviar(cliente,base+"restablecer-contrasena","{\"token\":\""+expirado+"\",\"contrasena\":\"NuevaClave1!\"}",null).statusCode());
+        var solicitud=HttpRequest.newBuilder(URI.create(base+"restablecer-contrasena")).header("Content-Type","application/json").POST(HttpRequest.BodyPublishers.ofString(prefijo+"NuevaClave1!\"}")).build();
+        var a=cliente.sendAsync(solicitud,HttpResponse.BodyHandlers.ofString());
+        var b=cliente.sendAsync(solicitud,HttpResponse.BodyHandlers.ofString());
+        var codigos=List.of(a.join().statusCode(),b.join().statusCode());
+        assertTrue(codigos.contains(200) && codigos.contains(400),codigos.toString());
+        assertEquals(401,enviar(cliente,base+"me",null,jwt).statusCode());
+        assertEquals(200,enviar(cliente,base+"login","{\"correo\":\"recuperar@ejemplo.invalid\",\"contrasena\":\"NuevaClave1!\"}",null).statusCode());
+        assertEquals(1L,jdbc.queryForObject("SELECT version_tokens FROM usuarios WHERE id=?",Long.class,id));
+        assertEquals(1,jdbc.queryForObject("SELECT COUNT(*) FROM recuperaciones_contrasena WHERE usuario_id=? AND usado_en IS NOT NULL",Integer.class,id));
+        assertEquals(400,enviar(cliente,base+"restablecer-contrasena",prefijo+"NuevaClave1!\"}",null).statusCode());
+        String invalidado=Base64.getUrlEncoder().withoutPadding().encodeToString("12345678901234567890123456789012".getBytes(java.nio.charset.StandardCharsets.US_ASCII));
+        byte[] hashInvalidado=java.security.MessageDigest.getInstance("SHA-256").digest(invalidado.getBytes(java.nio.charset.StandardCharsets.US_ASCII));
+        jdbc.update("INSERT INTO recuperaciones_contrasena(usuario_id,token_hash,creado_en,expira_en,invalidado_en) VALUES (?,?,NOW(6),DATE_ADD(NOW(6),INTERVAL 20 MINUTE),NOW(6))",id,hashInvalidado);
+        assertEquals(400,enviar(cliente,base+"restablecer-contrasena","{\"token\":\""+invalidado+"\",\"contrasena\":\"NuevaClave1!\"}",null).statusCode());
+        jdbc.update("UPDATE usuarios SET eliminado_en=NOW(6) WHERE id=?",id);
+        var desactivada=enviar(cliente,base+"recuperar-contrasena","{\"correo\":\"recuperar@ejemplo.invalid\"}",null);
+        assertEquals(existente.body(),desactivada.body());
+        assertEquals(429,enviar(cliente,base+"recuperar-contrasena","{\"correo\":\"noexiste@ejemplo.invalid\"}",null).statusCode());
+        org.mockito.Mockito.verify(correoSimulado,org.mockito.Mockito.after(1000).times(2)).send(org.mockito.ArgumentMatchers.any(org.springframework.mail.SimpleMailMessage.class));
     }
 
     private static String extraerToken(String respuesta) {

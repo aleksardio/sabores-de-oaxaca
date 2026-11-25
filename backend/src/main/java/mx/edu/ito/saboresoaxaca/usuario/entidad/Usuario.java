@@ -76,4 +76,10 @@ public class Usuario {
     public LocalDateTime getCreadoEn() { return creadoEn; }
     public LocalDateTime getActualizadoEn() { return actualizadoEn; }
     public LocalDateTime getEliminadoEn() { return eliminadoEn; }
+    public void restablecerContrasena(String hash, LocalDateTime ahora) {
+        if (versionTokens == Long.MAX_VALUE) throw new IllegalStateException("Versión de tokens agotada");
+        this.contrasenaHash = Objects.requireNonNull(hash);
+        this.versionTokens++;
+        this.actualizadoEn = ahora;
+    }
 }
