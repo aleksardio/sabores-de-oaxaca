@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { ApiError } from '../services/apiClient.js'
 
 const fieldDetails = {
@@ -8,7 +8,10 @@ const fieldDetails = {
   confirmation: { label: 'Confirmar contraseña', type: 'password', autoComplete: 'new-password' },
 }
 
-export default function AuthForm({ fields, validate, onSubmit, onSuccess, submitLabel, pendingLabel, showPasswordToggle = false, children }) {
+export default function AuthForm({
+  fields, validate, onSubmit, onSuccess, submitLabel, pendingLabel, showPasswordToggle = false,
+  passwordLabel, passwordAutoComplete = 'new-password', passwordDescriptionId, children,
+}) {
   const id = useId()
   const formRef = useRef(null)
   const nextFieldToFocus = useRef(null)
@@ -19,13 +22,13 @@ export default function AuthForm({ fields, validate, onSubmit, onSuccess, submit
   const [pending, setPending] = useState(false)
   const [submitError, setSubmitError] = useState('')
 
-  useEffect(() => () => activeRequest.current?.abort(), [])
+  useLayoutEffect(() => () => activeRequest.current?.abort(), [])
 
   useEffect(() => {
     const field = nextFieldToFocus.current
     if (field) {
       nextFieldToFocus.current = null
-      formRef.current.elements.namedItem(field)?.focus()
+      formRef.current?.elements.namedItem(field)?.focus()
     }
   }, [errors])
 
@@ -47,8 +50,9 @@ export default function AuthForm({ fields, validate, onSubmit, onSuccess, submit
     activeRequest.current = controller
     setPending(true)
     let succeeded = false
+    let result
     try {
-      await onSubmit(values, controller.signal)
+      result = await onSubmit(values, controller.signal)
       succeeded = true
     } catch (error) {
       if (controller.signal.aborted) return
@@ -66,7 +70,7 @@ export default function AuthForm({ fields, validate, onSubmit, onSuccess, submit
         setPending(false)
       }
     }
-    if (succeeded && !controller.signal.aborted) onSuccess?.()
+    if (succeeded && !controller.signal.aborted) onSuccess?.(result)
   }
 
   function handleChange(event) {
@@ -87,22 +91,23 @@ export default function AuthForm({ fields, validate, onSubmit, onSuccess, submit
           const fieldId = `${id}-${field}`
           const errorId = `${fieldId}-error`
           const canToggle = field === 'password' && showPasswordToggle
+          const description = [field === 'password' && passwordDescriptionId, errors[field] && errorId].filter(Boolean).join(' ')
 
           return (
             <div className="auth-field" key={field}>
-              <label htmlFor={fieldId}>{label}</label>
+              <label htmlFor={fieldId}>{field === 'password' ? passwordLabel ?? label : label}</label>
               <div className={`auth-input-wrap${canToggle ? ' auth-input-wrap--toggle' : ''}`}>
                 <input
                   id={fieldId}
                   name={field}
                   type={canToggle && passwordVisible ? 'text' : type}
-                  autoComplete={canToggle ? 'current-password' : autoComplete}
+                  autoComplete={field === 'password' ? passwordAutoComplete : autoComplete}
                   autoCapitalize={field === 'email' || type === 'password' ? 'none' : undefined}
                   spellCheck={field === 'email' || type === 'password' ? false : undefined}
                   readOnly={pending}
                   required
                   aria-invalid={errors[field] ? true : undefined}
-                  aria-describedby={errors[field] ? errorId : undefined}
+                  aria-describedby={description || undefined}
                 />
                 {canToggle && (
                   <button

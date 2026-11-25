@@ -25,9 +25,10 @@ import ProfilePage from '../pages/ProfilePage.jsx'
 import RecipeDetailPage from '../pages/RecipeDetailPage.jsx'
 import RecipesPage from '../pages/RecipesPage.jsx'
 import RegisterPage from '../pages/RegisterPage.jsx'
+import ResetPasswordPage from '../pages/ResetPasswordPage.jsx'
 import TraditionsPage from '../pages/TraditionsPage.jsx'
 
-export default function AppRoutes() {
+export default function AppRoutes({ readResetFlow }) {
   return (
     <Routes>
       <Route path="/" element={<MainLayout />}>
@@ -66,6 +67,7 @@ export default function AppRoutes() {
         <Route path="login" element={<LoginPage />} />
         <Route path="registro" element={<RegisterPage />} />
         <Route path="recuperar-contrasena" element={<ForgotPasswordPage />} />
+        <Route path="restablecer-contrasena" element={<ResetPasswordPage readResetFlow={readResetFlow} />} />
       </Route>
     </Routes>
   )

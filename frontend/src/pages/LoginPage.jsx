@@ -18,7 +18,7 @@ export default function LoginPage() {
       <h1 tabIndex={-1}>Bienvenido de nuevo</h1>
       <p className="auth-description">Inicia sesión para consultar tu perfil.</p>
       {notice && <p role="status">{notice}</p>}
-      <AuthForm fields={fields} validate={validateLogin} onSubmit={signIn} submitLabel="Iniciar sesión" pendingLabel="Iniciando sesión…" showPasswordToggle>
+      <AuthForm fields={fields} validate={validateLogin} onSubmit={signIn} submitLabel="Iniciar sesión" pendingLabel="Iniciando sesión…" showPasswordToggle passwordAutoComplete="current-password">
         <Link className="site-button" to="/recuperar-contrasena" state={{ from: destination }}>¿Olvidaste tu contraseña?</Link>
         <Link className="site-button" to="/registro" state={{ from: destination }}>Crear cuenta nueva</Link>
       </AuthForm>
