@@ -75,7 +75,7 @@ El dominio previsto para los enlaces de recuperación es `https://saboresdeoaxac
 - La recuperación está deshabilitada por defecto. Requiere configuración explícita y un transporte SMTP verificado; el VPS de DigitalOcean tiene salida SMTP restringida. No se garantiza entrega a proveedores externos. Ver [recuperación](backend/docs/RECUPERACION_CONTRASENA_API.md).
 - El inicio con Google y las notificaciones SMS no deben considerarse implementados ni operativos; WhatsApp está omitido del alcance.
 - Los paneles administrativos que siguen usando datos demo no representan necesariamente las API reales de administración y reportes. Confirmar la integración de cada vista antes de la entrega.
-- Las URL multimedia de los datos ficticios no son imágenes reales. Los datos del script demo no cubren todavía el volumen propuesto de 10–15 recetas e ingredientes; falta confirmar los mínimos de la asignación.
+- Las URL multimedia de los datos ficticios no son imágenes reales. El script demo prepara 13 recetas y 27 ingredientes; falta confirmar los mínimos oficiales de la asignación.
 - Para producción quedan por verificar la protección distribuida contra abuso, los respaldos y la publicación de archivos; consultar los contratos por módulo.
 
 ## Diseño, código y colaboración
