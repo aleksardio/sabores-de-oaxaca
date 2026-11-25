@@ -1,6 +1,7 @@
 import { Link } from 'react-router'
 import { useAuth } from '../auth/useAuth.js'
 import LogoutButton from '../components/LogoutButton.jsx'
+import { canAdminister } from '../utils/adminAccess.js'
 import { canModerate } from '../utils/moderationAccess.js'
 import '../styles/community.css'
 
@@ -57,6 +58,7 @@ export default function ProfilePage() {
           <div className="community-actions">
             <Link className="site-button site-button--green" to="/cocinero/recetas">Mis recetas</Link>
             {canModerate(user) && <Link className="site-button" to="/moderador/recetas">Panel de moderación</Link>}
+            {canAdminister(user) && <Link className="site-button" to="/admin/usuarios">Panel de administración</Link>}
             <LogoutButton />
           </div>
         </section>
