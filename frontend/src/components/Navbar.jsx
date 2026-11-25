@@ -1,7 +1,7 @@
 import { Link, NavLink } from 'react-router'
 import { useAuth } from '../auth/useAuth.js'
 import LogoutButton from './LogoutButton.jsx'
-import { canWriteRecipes } from '../utils/cookRecipeRules.js'
+import ShareRecipeAction from './ShareRecipeAction.jsx'
 
 export default function Navbar() {
   const { user, logoutPending, logoutError, notice, leaveLocally } = useAuth()
@@ -26,11 +26,7 @@ export default function Navbar() {
               <LogoutButton />
             </>
           ) : <NavLink className="site-button" to="/login">Iniciar sesión</NavLink>}
-          {canWriteRecipes(user) ? (
-            <Link className="site-button site-button--clay" to="/cocinero/recetas/nueva">Compartir receta</Link>
-          ) : <button className="site-button site-button--clay" type="button" disabled title="Se requiere el rol COCINERO">
-            Compartir receta
-          </button>}
+          <ShareRecipeAction className="site-button site-button--clay">Compartir receta</ShareRecipeAction>
         </div>
       </div>
       <div className="container">

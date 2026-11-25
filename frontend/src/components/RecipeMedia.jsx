@@ -1,6 +1,7 @@
 import { isHttpsMediaUrl } from '../utils/recipeEditorValidation.js'
 import { canceledUpload } from '../utils/multimediaFiles.js'
 import RecipeImage from './RecipeImage.jsx'
+import RecipeVideo from './RecipeVideo.jsx'
 
 const bytes = new Intl.NumberFormat('es-MX', { maximumFractionDigits: 2 })
 
@@ -23,9 +24,9 @@ export default function RecipeMedia({ row, title, showImage = true }) {
         role={local?.status === 'error' ? 'alert' : 'status'}>{status}</p>
       {type === 'IMAGEN' && showImage &&
         <RecipeImage key={src} image={src ? { src, alt } : null} title={title || 'la receta'} />}
-      {type === 'VIDEO' && local &&
-        <video key={src} src={src} controls playsInline preload="metadata" aria-label={alt || local.file.name} />}
-      {remote && <a href={url} target="_blank" rel="noopener noreferrer">{alt || url} (abre en otra pestaña)</a>}
+      {type === 'VIDEO'
+        ? <RecipeVideo url={url} localSrc={local?.src} label={alt || local?.file.name} />
+        : remote && <a href={url} target="_blank" rel="noopener noreferrer">{alt || url} (abre en otra pestaña)</a>}
       {!local && !remote && <p>Referencia sin URL HTTPS válida.</p>}
     </div>
   )
