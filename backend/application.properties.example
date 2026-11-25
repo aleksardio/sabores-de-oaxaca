@@ -6,6 +6,7 @@
 # La configuración está en src/main/resources/application-dev.properties.
 # Variables SMS (opcionales; no configurar claves reales aquí)
 # SMS_HABILITADO=false
+# SMS_MODO_PRUEBA=true  # cuenta Trial; usa plantilla sms_internal_alerts
 # TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 # TWILIO_AUTH_TOKEN=TOKEN_SOLO_EN_ENTORNO_PRIVADO
 # TWILIO_SMS_FROM=+1XXXXXXXXXX
