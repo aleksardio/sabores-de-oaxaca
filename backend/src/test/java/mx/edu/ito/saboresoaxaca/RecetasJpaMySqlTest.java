@@ -488,11 +488,35 @@ class RecetasJpaMySqlTest {
             assertEquals(201, enviar(client, reportar, "POST", motivo, reportante).statusCode());
             assertEquals(201, enviar(client, reportar, "POST", motivo, revisor).statusCode());
             Long bajaReporte = jdbc.queryForObject("SELECT MIN(id) FROM reportes WHERE receta_id=? AND estado='ABIERTO'", Long.class, ids.get(0));
+            // La baja resolvería también un reporte del revisor, aunque el seleccionado sea ajeno.
+            assertConflictoDeInteres(client, jdbc, base, bajaReporte, ids.get(0), revisor, "dar-baja");
+            Long reportePropioRevisor = jdbc.queryForObject("SELECT id FROM reportes WHERE receta_id=? AND reportante_id=? AND estado='ABIERTO'", Long.class, ids.get(0), revisorId);
+            for (String decision : List.of("descartar", "dar-baja"))
+                assertConflictoDeInteres(client, jdbc, base, reportePropioRevisor, ids.get(0), revisor, decision);
+            assertEquals(201, enviar(client, base + "/recetas/" + ids.get(1) + "/reportes", "POST", motivo, jwt).statusCode());
+            Long reportePropioAdmin = jdbc.queryForObject("SELECT id FROM reportes WHERE receta_id=? AND reportante_id=? AND estado='ABIERTO'", Long.class, ids.get(1), nuevoAutor);
+            for (String decision : List.of("descartar", "dar-baja"))
+                assertConflictoDeInteres(client, jdbc, base, reportePropioAdmin, ids.get(1), jwt, decision);
+            for (var autorYToken : java.util.Map.of(nuevoAutor, jwt, revisorId, revisor).entrySet()) {
+                jdbc.update("INSERT INTO recetas(autor_id,titulo,descripcion,preparacion,tipo,estado,porciones_base,creado_en,actualizado_en) VALUES (?,'Conflicto autor','d','p','COMUN','PUBLICADA',4,NOW(6),NOW(6))", autorYToken.getKey());
+                Long recetaConflicto = jdbc.queryForObject("SELECT MAX(id) FROM recetas WHERE autor_id=? AND titulo='Conflicto autor'", Long.class, autorYToken.getKey());
+                assertEquals(201, enviar(client, base + "/recetas/" + recetaConflicto + "/reportes", "POST", motivo, reportante).statusCode());
+                Long reporteConflicto = jdbc.queryForObject("SELECT id FROM reportes WHERE receta_id=?", Long.class, recetaConflicto);
+                for (String decision : List.of("descartar", "dar-baja"))
+                    assertConflictoDeInteres(client, jdbc, base, reporteConflicto, recetaConflicto, autorYToken.getValue(), decision);
+            }
+            jdbc.update("INSERT INTO recetas(autor_id,titulo,descripcion,preparacion,tipo,estado,porciones_base,creado_en,actualizado_en) VALUES (?,'Sin conflicto','d','p','COMUN','PUBLICADA',4,NOW(6),NOW(6))", autor);
+            Long recetaSinConflicto = jdbc.queryForObject("SELECT MAX(id) FROM recetas WHERE titulo='Sin conflicto'", Long.class);
+            assertEquals(201, enviar(client, base + "/recetas/" + recetaSinConflicto + "/reportes", "POST", motivo, reportante).statusCode());
+            Long reporteSinConflicto = jdbc.queryForObject("SELECT id FROM reportes WHERE receta_id=?", Long.class, recetaSinConflicto);
+            assertEquals(200, enviar(client, base + "/moderacion/reportes/" + reporteSinConflicto + "/dar-baja", "POST", "", revisor).statusCode());
+            assertEquals("RESUELTO", jdbc.queryForObject("SELECT estado FROM reportes WHERE id=?", String.class, reporteSinConflicto));
+            assertEquals(404, get(client, base + "/recetas/" + recetaSinConflicto).statusCode());
             var poolReportes=java.util.concurrent.Executors.newFixedThreadPool(2);
             var inicioReportes=new java.util.concurrent.CountDownLatch(1);
             try {
-                var uno=poolReportes.submit(() -> { inicioReportes.await(); return enviar(client, base + "/moderacion/reportes/" + bajaReporte + "/dar-baja", "POST", "", revisor); });
-                var dos=poolReportes.submit(() -> { inicioReportes.await(); return enviar(client, base + "/moderacion/reportes/" + bajaReporte + "/dar-baja", "POST", "", revisor); });
+                var uno=poolReportes.submit(() -> { inicioReportes.await(); return enviar(client, base + "/moderacion/reportes/" + bajaReporte + "/dar-baja", "POST", "", jwt); });
+                var dos=poolReportes.submit(() -> { inicioReportes.await(); return enviar(client, base + "/moderacion/reportes/" + bajaReporte + "/dar-baja", "POST", "", jwt); });
                 inicioReportes.countDown();
                 var estadosReporte=List.of(uno.get(30,java.util.concurrent.TimeUnit.SECONDS).statusCode(),dos.get(30,java.util.concurrent.TimeUnit.SECONDS).statusCode());
                 assertTrue(estadosReporte.contains(200) && estadosReporte.contains(409), estadosReporte.toString());
@@ -511,9 +535,24 @@ class RecetasJpaMySqlTest {
                 inicioDuplicados.countDown();
                 var codigos=List.of(uno.get(30,java.util.concurrent.TimeUnit.SECONDS).statusCode(),dos.get(30,java.util.concurrent.TimeUnit.SECONDS).statusCode());
                 assertTrue(codigos.contains(201) && codigos.contains(409), codigos.toString());
-                assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM reportes WHERE receta_id=? AND estado='ABIERTO'", Integer.class, ids.get(1)));
+                assertEquals(2, jdbc.queryForObject("SELECT COUNT(*) FROM reportes WHERE receta_id=? AND estado='ABIERTO'", Integer.class, ids.get(1)));
             } finally { poolDuplicados.shutdownNow(); }
         }
+    }
+    private static void assertConflictoDeInteres(java.net.http.HttpClient client, JdbcTemplate jdbc, String base, Long reporte, Long receta, String jwt, String decision) throws Exception {
+        var antesReporte=jdbc.queryForMap("SELECT estado, actualizado_en, resuelto_en FROM reportes WHERE id=?", reporte);
+        var antesReportes=jdbc.queryForList("SELECT id, estado, actualizado_en, resuelto_en FROM reportes WHERE receta_id=? ORDER BY id", receta);
+        var antesReceta=jdbc.queryForMap("SELECT estado, eliminado_en, actualizado_en, version_receta FROM recetas WHERE id=?", receta);
+        int auditoria=jdbc.queryForObject("SELECT COUNT(*) FROM auditoria_moderacion WHERE receta_id=?", Integer.class, receta);
+        int administrativa=jdbc.queryForObject("SELECT COUNT(*) FROM auditoria_administrativa WHERE receta_afectada_id=?", Integer.class, receta);
+        var respuesta=enviar(client, base + "/moderacion/reportes/" + reporte + "/" + decision, "POST", "", jwt);
+        assertEquals(403, respuesta.statusCode(), respuesta.body());
+        assertTrue(respuesta.body().contains("No puede"), respuesta.body());
+        assertEquals(antesReporte, jdbc.queryForMap("SELECT estado, actualizado_en, resuelto_en FROM reportes WHERE id=?", reporte));
+        assertEquals(antesReportes, jdbc.queryForList("SELECT id, estado, actualizado_en, resuelto_en FROM reportes WHERE receta_id=? ORDER BY id", receta));
+        assertEquals(antesReceta, jdbc.queryForMap("SELECT estado, eliminado_en, actualizado_en, version_receta FROM recetas WHERE id=?", receta));
+        assertEquals(auditoria, jdbc.queryForObject("SELECT COUNT(*) FROM auditoria_moderacion WHERE receta_id=?", Integer.class, receta));
+        assertEquals(administrativa, jdbc.queryForObject("SELECT COUNT(*) FROM auditoria_administrativa WHERE receta_afectada_id=?", Integer.class, receta));
     }
     private static java.net.http.HttpResponse<String> get(java.net.http.HttpClient client, String url) throws Exception {
         return client.send(java.net.http.HttpRequest.newBuilder(java.net.URI.create(url)).GET().build(), java.net.http.HttpResponse.BodyHandlers.ofString());

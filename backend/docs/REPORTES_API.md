@@ -36,6 +36,8 @@ Respuesta `200` ilustrativa:
 
 Cada transición registra una fila `DESCARTAR_REPORTE` o `RESOLVER_REPORTE` en `auditoria_moderacion`. La baja se registra además como `BAJA_RECETA` en `auditoria_administrativa`, con el ID del reporte originador en `detalle`. Los demás reportes resueltos por la baja identifican el reporte originador en su auditoría. Todas las operaciones y auditorías son transaccionales. La serialización usa bloqueo de fila de receta, por lo que escrituras externas a esta API deben respetar el mismo protocolo para garantizar la unicidad de reportes abiertos.
 
+Un `MODERADOR` o `ADMIN` no puede decidir sobre un reporte que haya creado ni sobre uno relacionado con una receta de su autoría: recibe `403` y no se modifica la receta, el reporte ni la auditoría. Como dar de baja resuelve todos los reportes pendientes de la receta, también se rechaza si alguno de esos reportes fue creado por el actor, aunque se haya seleccionado otro reporte.
+
 ## Bruno y React
 
 En Bruno crear un POST a `{{baseUrl}}/api/v1/recetas/{{recetaId}}/reportes`, autenticación Bearer y JSON del ejemplo. Para moderar, usar un token de moderador en GET de bandeja y POST sin cuerpo a la ruta de decisión. En React, enviar `fetch(url, {method: 'POST', headers: {Authorization: 'Bearer ' + token, 'Content-Type': 'application/json'}, body: JSON.stringify({motivo})})`; no confiar en controles de rol del cliente como autorización. Ante `409`, volver a consultar el estado en lugar de repetir automáticamente.
