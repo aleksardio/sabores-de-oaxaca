@@ -7,6 +7,7 @@ import mx.edu.ito.saboresoaxaca.auth.autorizacion.Autenticado;
 import mx.edu.ito.saboresoaxaca.receta.entidad.Receta;
 import mx.edu.ito.saboresoaxaca.usuario.entidad.Usuario;
 import org.springframework.context.annotation.Profile;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -19,7 +20,10 @@ import java.util.List;
 @Service @Profile("!bootstrap")
 public class ReportesServicio {
     private final EntityManager em;
-    public ReportesServicio(EntityManager em) { this.em=em; }
+    private final ApplicationEventPublisher eventos;
+    public ReportesServicio(EntityManager em, ApplicationEventPublisher eventos) {
+        this.em=em; this.eventos=eventos;
+    }
     @Autenticado @Transactional
     public ReportesDto.Creado crear(Long id, String motivo) {
         long actor=actor();
@@ -32,6 +36,8 @@ public class ReportesServicio {
         var fecha=LocalDateTime.now(ZoneOffset.UTC);
         Reporte p=new Reporte(r,em.getReference(Usuario.class,actor),motivo.strip(),fecha);
         em.persist(p);
+        em.flush();
+        eventos.publishEvent(new ReporteCreadoEvento(p.getId(), id));
         return new ReportesDto.Creado(p.getId(),id,p.getMotivo(),p.getEstado(),fecha);
     }
     @Moderacion @Transactional(readOnly=true)
