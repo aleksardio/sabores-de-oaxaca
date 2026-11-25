@@ -1,56 +1,27 @@
-# Datos ficticios para pruebas manuales
+# Datos ficticios de demostración
 
-`recetas_oaxaquenas.sql` es un script manual para desarrollo local, **no es una migración Flyway**. No se ejecuta al arrancar la aplicación. Incluye tres recetas publicadas y un borrador, ingredientes, categorías y referencias de multimedia. Las URL `example.invalid` son ficticias: no se espera que carguen imágenes.
+`recetas_oaxaquenas.sql` es una carga manual para desarrollo aislado, **no una migración Flyway**. En una base vacía de datos demo con V1–V7 y un autor activo, prepara 13 recetas (11 publicadas y 2 borradores), 5 categorías funcionales y 27 ingredientes. Son versiones ilustrativas, no recetas culturalmente verificadas; las URL de imágenes en `example.invalid` son ficticias y no cargarán. El enunciado oficial y sus mínimos no están disponibles para confirmar requisitos adicionales.
 
-## Antes de ejecutar
+## Ejecución segura
 
-1. Revisar el SQL y confirmar que el destino es un entorno de desarrollo autorizado con V1–V6 aplicadas. No usar producción ni una base que no se desee modificar. Contar con un respaldo apropiado.
-2. Elegir conscientemente una cuenta **activa de desarrollo** como autor. El script no crea cuentas ni modifica datos del autor, contraseña o roles. El usuario MySQL necesita permisos de lectura e inserción en las tablas indicadas y `CREATE TEMPORARY TABLES`.
-3. Desde la raíz del repositorio, abrir el cliente sin escribir la contraseña en el comando:
+1. Usar solo una base MySQL 8 de desarrollo autorizada y respaldada, con V1–V7 aplicadas. Nunca ejecutar en producción. El usuario MySQL necesita `SELECT`, `INSERT` en las tablas indicadas y `CREATE TEMPORARY TABLES`.
+2. Elegir explícitamente el ID de un usuario de desarrollo activo ya existente. No se crean usuarios, contraseñas ni roles; no se modifican los existentes. Verificar el destino y autor con una consulta de solo lectura, sin compartir datos personales.
+3. Desde la raíz del repositorio ejecutar **en modo batch**, sustituyendo `123` y los marcadores por valores locales autorizados. El cliente solicita la contraseña interactivamente; no escribirla en el comando. En `cmd.exe` (no PowerShell):
 
-   ```powershell
-   mysql --default-character-set=utf8mb4 --host=127.0.0.1 --port=3306 --user=USUARIO_MYSQL --password sabores_oaxaca
+   ```cmd
+   mysql --default-character-set=utf8mb4 --host=127.0.0.1 --port=3306 --user=USUARIO_MYSQL --password --init-command="SET @demo_autor_id=123" BASE_DESARROLLO < backend/datos-demo-local/recetas_oaxaquenas.sql
    ```
 
-4. En el cliente MySQL, comprobar `SELECT DATABASE();` y buscar la cuenta de desarrollo por su correo sin compartirlo:
+No usar `--force`, redirecciones que oculten errores ni copias concurrentes. El proceso debe detenerse y cerrar la conexión al primer error: InnoDB revierte la transacción pendiente. No ejecutar con `SOURCE` en una sesión interactiva que pudiera continuar hasta `COMMIT` después de un error. Comprobar código de salida y resultados; ante error revisar el estado antes de reintentar. Las tablas temporales son de sesión. Si el autor no existe o está desactivado no se insertan datos.
 
-   ```sql
-   SELECT id, nombre_visible FROM usuarios
-   WHERE correo = 'CORREO_DE_DESARROLLO' AND eliminado_en IS NULL;
-   ```
+La salida posterior al `COMMIT` muestra los IDs y códigos de recetas creadas en esa ejecución, y luego todas las recetas marcadas. Las asociaciones de esas recetas también se crean en esa transacción. Los ingredientes y categorías se reutilizan por nombre según la colación; la salida no distingue cuáles de esos catálogos fueron creados, por lo que puede compararse su listado antes y después si se necesita auditoría. Las recetas se reconocen por el prefijo de descripción `[DEMO-LOCAL-SO-2026:código]`: no editarlo. Si ya existe el prefijo se omite la receta y no se toca ni se reparan sus asociaciones. Esto conserva los datos de la versión anterior, incluso su borrador incompleto; usar una base nueva para obtener el conjunto completo. No ejecutar cargas concurrentes: la comprobación de marcas no sustituye un índice único.
 
-5. Sustituir `123` por el ID elegido y ejecutar **en la misma sesión**. La ruta de `source` es relativa al directorio desde el que se abrió el cliente; también se puede usar una ruta absoluta con `/`:
+## Comprobación
 
-   ```sql
-   SET @demo_autor_id = 123;
-   SOURCE backend/datos-demo-local/recetas_oaxaquenas.sql
-   ```
+Ejecutar [`database/consultas_verificacion_entrega.sql`](../../database/consultas_verificacion_entrega.sql) con un usuario de solo lectura. En una base nueva con autor válido se esperan 13 recetas demo: 11 `PUBLICADA`, 2 `BORRADOR`, todas con categoría e ingredientes, y cero huérfanos. Una segunda ejecución no debe crear recetas adicionales; los catálogos existentes se reutilizan. En bases con datos previos los conteos generales serán mayores y puede haber recetas demo anteriores que requieran revisión manual. Los favoritos, reportes y usuarios no se siembran: usar escenarios autorizados y cuentas ficticias creadas por los mecanismos normales.
 
-El script informa si el autor no existe o está desactivado; en ese caso no inserta datos. La ejecución normal usa una transacción; si hay un error, no continuar con una ejecución parcial: revisar el error y la transacción, usar `ROLLBACK` si sigue activa e inspeccionar el estado antes de volver a intentar. No usar el modo `--force`. El cliente no debe ejecutar copias concurrentes del script.
+El script escribe `categorias`, `ingredientes`, `recetas`, `recetas_categorias`, `recetas_ingredientes` y `recetas_multimedia`. Se consulta `usuarios` para validar el autor. Las recetas públicas solo aparecen en el catálogo mientras el autor siga activo y la receta no esté dada de baja.
 
-Las categorías e ingredientes existentes se reutilizan por nombre según la colación de MySQL, sin alterar sus datos. Las recetas se identifican por marcas en la descripción. Si una marca ya existe, se omite esa receta y **no se actualizan sus asociaciones**; por ello, una receta demo editada, incompleta o desactivada previamente no se restaura automáticamente. No cambiar las marcas si se desea conservar la idempotencia. La tabla temporal de control existe solo en la sesión y no crea una tabla permanente.
+### Validación realizada
 
-## IDs y comprobación
-
-El script imprime los IDs reales. También pueden consultarse después:
-
-```sql
-SELECT id, titulo, estado, autor_id
-FROM recetas
-WHERE descripcion IN (
-  '[DEMO-LOCAL-SO-2026:mole] Receta ficticia para pruebas locales.',
-  '[DEMO-LOCAL-SO-2026:tlayuda] Receta ficticia para pruebas locales.',
-  '[DEMO-LOCAL-SO-2026:memelas] Receta ficticia para pruebas locales.',
-  '[DEMO-LOCAL-SO-2026:borrador] Receta ficticia para pruebas locales.'
-)
-ORDER BY id;
-```
-
-En Bruno, con el backend conectado a la misma base y sin JWT, sustituir `ID_MOLE` por el ID obtenido:
-
-- `GET http://localhost:8080/api/v1/recetas`: catálogo paginado con las tres recetas `PUBLICADA` y sin el borrador, siempre que el autor continúe activo y las recetas no estén eliminadas. Puede incluir otras recetas públicas preexistentes y el tamaño de página limita los resultados.
-- `GET http://localhost:8080/api/v1/categorias`: incluye `Moles` y `Antojitos`, además de categorías preexistentes.
-- `GET http://localhost:8080/api/v1/recetas/ID_MOLE`: detalle con cuatro porciones base, ingredientes, categoría y una URL de imagen ficticia. El ID del borrador devuelve 404.
-- `GET http://localhost:8080/api/v1/recetas/ID_MOLE?porciones=2`: el chile seco pasa de `100.000` a `50.000 G`; el chocolate de `50.000` a `25.000 G`; la sal permanece con cantidad nula y unidad `AL_GUSTO`. Sin el parámetro, la cantidad ajustada es nula.
-
-Las tablas escritas son `categorias`, `ingredientes`, `recetas`, `recetas_categorias`, `recetas_ingredientes` y `recetas_multimedia`; `usuarios` se consulta únicamente para validar el autor. No hay contraseñas ni datos demo dentro de las migraciones.
+En una instancia MySQL Community 8.0.46 aislada, con V1–V7 aplicadas por Flyway y un autor ficticio activo, la primera ejecución creó 13 recetas y la segunda no creó recetas adicionales. El resultado contenía 11 publicadas y 2 borradores, 27 ingredientes, 5 categorías, 66 relaciones receta–ingrediente y 13 relaciones receta–categoría; las consultas no detectaron huérfanos ni recetas demo sin asociaciones. Esta comprobación no sustituye la revisión de datos en otros esquemas ni confirma los requisitos oficiales de volumen.
