@@ -39,6 +39,8 @@ class SecurityConfig {
                 .requestMatchers(request -> request.getDispatcherType() == DispatcherType.ERROR && "/error".equals(request.getServletPath())).permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/public/health").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/recetas", "/api/v1/recetas/{id}", "/api/v1/categorias", "/api/v1/ingredientes").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/v1/recetas/{id}/reportes").authenticated()
+                .requestMatchers("/api/v1/moderacion/reportes", "/api/v1/moderacion/reportes/**").hasAnyRole("MODERADOR", "ADMIN")
                 .requestMatchers(HttpMethod.GET, "/api/v1/mis-recetas", "/api/v1/mis-recetas/{id}").authenticated()
                 .requestMatchers("/api/v1/admin/usuarios", "/api/v1/admin/usuarios/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/v1/mis-recetas").authenticated()
