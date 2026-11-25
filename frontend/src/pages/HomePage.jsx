@@ -1,7 +1,10 @@
 import { Link } from 'react-router'
-import RecipeCard, { DishIllustration } from '../components/RecipeCard.jsx'
+import DishIllustration from '../components/DishIllustration.jsx'
+import RecipeCard from '../components/RecipeCard.jsx'
+import ShareRecipeAction from '../components/ShareRecipeAction.jsx'
 import RequestError from '../components/RequestError.jsx'
 import { usePublicRequest } from '../hooks/usePublicRequest.js'
+import { useRecipeCovers } from '../hooks/useRecipeCovers.js'
 import { getRecipes } from '../services/recipesService.js'
 import '../styles/home.css'
 
@@ -9,6 +12,7 @@ const loadRecipes = (signal) => getRecipes({ tamano: 3 }, signal)
 
 export default function HomePage() {
   const { data, error, loading, retry } = usePublicRequest(loadRecipes)
+  const covers = useRecipeCovers(data?.contenido, 'home')
   return (
     <>
       <section className="home-hero" aria-labelledby="home-title">
@@ -20,9 +24,7 @@ export default function HomePage() {
           </p>
           <div className="home-hero__actions">
             <Link className="site-button site-button--clay" to="/recetas">Explorar recetas</Link>
-            <button className="site-button site-button--green" type="button" disabled title="Publicar recetas aún no está disponible">
-              Compartir mi receta
-            </button>
+            <ShareRecipeAction className="site-button site-button--green">Compartir mi receta</ShareRecipeAction>
           </div>
         </div>
         <DishIllustration label="Mole negro · tradición viva" tone="hero" decorative={false} />
@@ -35,7 +37,7 @@ export default function HomePage() {
           {error && <RequestError error={error} onRetry={retry} />}
           {data && (data.contenido.length ? (
             <ul className="featured-grid" role="list">
-              {data.contenido.map((recipe) => <RecipeCard key={recipe.id} recipe={recipe} />)}
+              {data.contenido.map((recipe) => <RecipeCard key={recipe.id} recipe={recipe} image={covers?.[recipe.id]} />)}
             </ul>
           ) : <p role="status">Aún no hay recetas para descubrir.</p>)}
           <Link to="/recetas">Ver catálogo de recetas</Link>

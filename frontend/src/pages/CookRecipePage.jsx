@@ -9,7 +9,7 @@ import { usePublicRequest } from '../hooks/usePublicRequest.js'
 import { createMultimediaService } from '../services/multimediaService.js'
 import { getCategories, getIngredients, parseRecipeId } from '../services/recipesService.js'
 import { canDeleteRecipe, canEditRecipe, canReviewRecipe, canWriteRecipes, recipeStates } from '../utils/cookRecipeRules.js'
-import { blankDraft, changedRecipeBody, draftFromDetail, maxItems, nextOrder, toRecipeBody, validateRecipeDraft, validateRecipeForReview } from '../utils/recipeEditorValidation.js'
+import { blankDraft, changedRecipeBody, draftFromDetail, maxItems, nextOrder, recipeReviewRequirements, toRecipeBody, validateRecipeDraft, validateRecipeForReview } from '../utils/recipeEditorValidation.js'
 import { createRecipeOperation, resolveRecipeConflict, saveAndRequestReview } from '../utils/cookRecipeActions.js'
 import { createLocalPreviews, markMediaSaved } from '../utils/recipeMedia.js'
 import { validateMediaFile } from '../utils/multimediaFiles.js'
@@ -77,7 +77,6 @@ function RecipeWorkspace({ mode, initialRecipe, user, service, created }) {
   const [baseline, setBaseline] = useState(() => initialRecipe ? draftFromDetail(initialRecipe) : blankDraft)
   const [draft, setDraft] = useState(baseline)
   const [preview, setPreview] = useState(false)
-  const [errors, setErrors] = useState({})
   const [failure, setFailure] = useState(null)
   const [pending, setPending] = useState(false)
   const [notice, setNotice] = useState(created ? 'Borrador guardado.' : '')
@@ -183,7 +182,6 @@ function RecipeWorkspace({ mode, initialRecipe, user, service, created }) {
     }
     previews.release(row.local?.src)
     setMediaError('')
-    setErrors({})
     setDraft((current) => ({ ...current, multimedia: current.multimedia.filter(({ id }) => id !== row.id) }))
   }
 
@@ -201,7 +199,6 @@ function RecipeWorkspace({ mode, initialRecipe, user, service, created }) {
   function save(review = false) {
     if (operation.busy || mediaBlocked || (review && !canReviewRecipe(user, record))) return
     const validation = review ? validateRecipeForReview(draft, record) : validateRecipeDraft(draft)
-    setErrors(validation)
     if (Object.keys(validation).length) return
     run(async (signal) => {
       setFailure(null)
@@ -278,7 +275,6 @@ function RecipeWorkspace({ mode, initialRecipe, user, service, created }) {
     setRecord(server)
     setBaseline(next.baseline)
     setDraft(next.draft)
-    setErrors({})
     setFailure(null)
     setConflict(null)
     setNotice(keepLocal ? 'Datos locales conservados; no se han reenviado.' : 'Detalle del servidor cargado.')
@@ -309,10 +305,13 @@ function RecipeWorkspace({ mode, initialRecipe, user, service, created }) {
         </div>
       )}
       {!formAvailable || preview ? <RecipeDraftPreview recipe={formAvailable ? draft : baseline} /> : (
-        <RecipeEditorForm draft={draft} onChange={setDraft} errors={errors} pending={pending} blocked={mediaBlocked}
+        <RecipeEditorForm draft={draft} onChange={setDraft} pending={pending} blocked={mediaBlocked}
+          blockReason={conflict ? 'Resuelve el conflicto de versión o estado antes de guardar o enviar a revisión.'
+            : confirmDelete ? 'Cancela o completa la confirmación de baja antes de continuar.' : undefined}
           mediaError={mediaError} onSelectMedia={selectMedia} onUploadMedia={uploadMedia} onCancelMedia={cancelMedia} onRemoveMedia={removeMedia}
           creating={creating} categories={categories} ingredients={ingredients} onSave={() => save()}
           onReview={canReviewRecipe(user, record) ? () => save(true) : null}
+          reviewRequirements={recipeReviewRequirements(draft, record)}
           reviewLabel={record?.estado === 'RECHAZADA' ? 'Reenviar a revisión' : 'Enviar a revisión'} />
       )}
       {!formAvailable && dirty && !deletionConfirmed && (
@@ -361,7 +360,7 @@ export default function CookRecipePage({ mode }) {
   return (
     <section className="cook-view">
       <BackToList />
-      {mode === 'create' ? <p role="alert">Acceso denegado. Se requiere el rol COCINERO para crear una receta.</p>
+      {mode === 'create' ? <p role="alert">Se requiere el rol COCINERO para crear una receta. Puedes solicitarlo a un administrador.</p>
         : !recipeId ? <p role="alert">Receta no encontrada.</p>
           : loading ? <p role="status">Cargando detalle…</p>
             : error && <RequestError error={error} onRetry={retry} />}

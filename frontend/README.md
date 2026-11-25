@@ -75,12 +75,13 @@ estrecha: el menú debe ajustarse y las tarjetas deben reorganizarse.
 
 ### Panel del cocinero
 
-**Mis recetas** está en el perfil y en el pie público. **Compartir receta**,
-en la barra de navegación, abre el formulario solo con `COCINERO`.
-`/cocinero` lleva a `/cocinero/recetas`. Sin sesión, se pide iniciar sesión
-con retorno a un destino interno permitido. Cualquier cuenta autenticada puede
-consultar sus propias recetas. `ADMIN` no implica `COCINERO`: sin el rol de
-cocinero solo se permite lectura. Spring Boot decide el acceso definitivo.
+**Mis recetas** está en el perfil y en el pie público. **Compartir mi receta**
+en Inicio y **Compartir receta** en la barra de navegación abren el formulario
+solo con `COCINERO`. Sin sesión, llevan al login con un destino interno
+validado. Si la cuenta no tiene ese rol, la acción explica cómo solicitarlo a
+un administrador. Ni `ADMIN` ni `MODERADOR` implican `COCINERO`.
+`/cocinero` lleva a `/cocinero/recetas`. Cualquier cuenta autenticada puede
+consultar sus propias recetas. Spring Boot decide el acceso definitivo.
 Un `401` invalida la sesión local; un `403` muestra acceso denegado sin cerrarla.
 El JWT solo vive en memoria.
 
@@ -104,21 +105,26 @@ o `VIDEO`), no los archivos.
 El editor conserva los IDs, nombres y cantidades base del detalle y vuelve
 a enviar las asociaciones completas al guardar.
 
-- **Ingredientes:** el selector reemplaza el campo manual: muestra nombres
-  de `GET /api/v1/ingredientes` y usa los IDs reales. Impide duplicados
-  y conserva cantidad, unidad, orden y nota al sustituir un ingrediente.
-  **Buscar ingrediente por nombre** filtra de inmediato los selectores de
-  todas las filas, sin nuevas solicitudes HTTP. No distingue mayúsculas ni
+- **Ingredientes:** **Buscar ingrediente por nombre** muestra hasta 20
+  resultados directamente seleccionables del catálogo de `GET /api/v1/ingredientes`,
+  sin nuevas solicitudes HTTP al escribir. No distingue mayúsculas ni
   acentos: `maiz` encuentra `Maíz` y `Masa de maíz` si están en el catálogo.
-  Aunque no coincidan, los ingredientes seleccionados siguen visibles.
-  Si no hay coincidencias, se muestra un aviso; borra la búsqueda para ver
-  todas las opciones y usa Tab para pasar del campo a los selectores.
+  Usa Tab para llegar a un resultado y actívalo para agregarlo y enfocar su
+  cantidad. No se agregan duplicados. Las filas existentes no se filtran;
+  puedes quitar un ingrediente o cambiarlo con su selector sin perder la
+  cantidad, unidad, orden ni nota. Si no hay coincidencias, se muestra un aviso.
   La vista previa muestra el nombre; el JSON envía `ingredienteId`, no
   el nombre. El editor indica carga, catálogo vacío, error de conexión o
   respuesta inesperada. Puedes reintentar sin perder datos ni bloquear el
   resto del formulario. Si el catálogo no incluye un ingrediente existente,
   conserva su ID y nombre, lo marca como no disponible y permite quitarlo
   o sustituirlo. El servidor valida definitivamente las referencias.
+- **Validaciones:** los errores aparecen al salir de un campo inválido o al
+  intentar guardar o revisar, se actualizan al corregirlo y no mueven el foco
+  mientras escribes. Un intento inválido enfoca el primer problema sin enviar
+  solicitudes. Los requisitos exclusivos para revisión se muestran aparte.
+  Archivos pendientes, operaciones en curso y conflictos bloquean las acciones
+  y muestran el motivo.
 - **Reenvío:** usa **Reenviar a revisión** desde el editor de una receta
   rechazada. No requiere una modificación si ya está completa. Un PUT exitoso
   conserva `RECHAZADA` y devuelve la versión para el POST; un PUT fallido
@@ -191,11 +197,13 @@ sin cambiar sus bytes, nombre ni fecha de modificación. Si declara un MIME
 incompatible, el editor rechaza el archivo en vez de sustituirlo. Spring Boot
 comprueba el MIME declarado y la firma real del archivo. La respuesta debe
 tener el tipo del archivo, URL HTTPS sin credenciales, nombre no vacío y tamaño
-entero positivo dentro del límite. El origen público de multimedia está **pendiente de
-confirmación**: se usa la URL que devuelve la API, sin imponer un dominio.
-Los videos locales tienen controles y no se reproducen solos; las referencias
-remotas de video se muestran como enlaces HTTPS, sin incrustar reproductores
-de orígenes no verificados.
+entero positivo dentro del límite. El reproductor HTML5 admite MP4 y WebM sin
+autoplay: en detalle público, editor, vista previa y moderación solo incrusta
+referencias HTTPS cuyo `URL.origin` sea exactamente
+`https://media.saboresdeoaxaca.food`. Una referencia HTTPS válida conserva
+su enlace alternativo; si falla la reproducción, se muestra también un aviso.
+La política `media-src` también bloquea redirecciones de reproducción hacia
+otros orígenes. Las vistas previas locales siguen usando URLs `blob:` revocables.
 
 > **Privacidad:** Los archivos subidos serán públicos aunque la receta
 > todavía sea un borrador. No subas información privada ni fotografías o
@@ -249,7 +257,7 @@ conserva la autorización definitiva. Un `401` invalida la sesión; un `403` no.
 | Endpoint bajo `/api/v1` | Operación |
 | --- | --- |
 | `GET /moderacion/recetas?pagina=0&tamano=12&tipo=COMUN` | Cola de pendientes no eliminadas. `pagina` comienza en cero; `tipo` es opcional y admite `COMUN` o `TRADICIONAL_OAXAQUENA`. El servidor filtra y pagina. |
-| `GET /moderacion/recetas/{id}` | Detalle pendiente de solo lectura, incluida la versión vigente. Muestra cantidades base sin recalcular y referencias multimedia sin incrustar videos ni HTML. |
+| `GET /moderacion/recetas/{id}` | Detalle pendiente de solo lectura, incluida la versión vigente. Muestra cantidades base sin recalcular y referencias multimedia con el mismo reproductor de origen autorizado, sin HTML arbitrario. |
 | `POST /moderacion/recetas/{id}/aprobar` | Tras confirmación explícita, sin cuerpo. Solo después de un `200` válido se muestra el resultado y el enlace público `/recetas/{id}`. El catálogo sigue leyendo su propia API. |
 | `POST /moderacion/recetas/{id}/rechazar` | Tras confirmación explícita, envía solo `{"motivo":"…"}`. El motivo es obligatorio y admite hasta 1000 caracteres tras quitar espacios extremos. No publica la receta. |
 
@@ -510,12 +518,20 @@ ocultan la preparación ni la información general de la receta.
 Los enlaces de Inicio y Catálogo usan IDs de MySQL; no se intentan traducir
 los antiguos slugs ficticios (`mole-negro`, `tlayuda`, etc.). Un ID inválido
 o un 404 muestra «Receta no encontrada». No se imputa región ni duración,
-ni se ofrecen filtros por ingredientes o video. El listado no incluye fotos.
-En el detalle se usa la primera imagen HTTPS utilizable, con texto alternativo.
-Sin imagen (URL ausente, `*.invalid`, video o carga fallida) se muestra
-`DishIllustration`. Los videos se ofrecen como enlaces HTTPS, sin
-reproducción incrustada mientras no se confirme su origen. La preparación se muestra como
-texto, sin HTML, y puede estar vacía.
+ni se ofrecen filtros por ingredientes o video.
+
+**Portadas:** el DTO de `GET /api/v1/recetas` no incluye multimedia. Inicio,
+Catálogo y Favoritos consultan `GET /api/v1/recetas/{id}` para las tarjetas
+mostradas, con un máximo de tres detalles simultáneos y sin repetir el mismo
+ID en una carga del listado. Al cambiar filtros, página o ruta, se cancelan
+los detalles obsoletos. Tanto en tarjetas como en el detalle se usa la
+primera referencia `IMAGEN` HTTPS válida por orden, con texto alternativo.
+Las fotos de las tarjetas se cargan de forma diferida sin cambiar su altura.
+Ante un error del detalle, ausencia de imagen válida o fallo de carga de la
+foto se mantiene `DishIllustration`. Tradiciones conserva las ilustraciones
+regionales y no consulta recetas. Esto agrega hasta una solicitud por tarjeta
+en cada carga: incluir una portada en el DTO del catálogo sería más eficiente.
+La preparación se muestra como texto, sin HTML, y puede estar vacía.
 
 Reportes y administración conservan datos de demostración en
 `demoModerationRecipes`, `demoModerationReports`, `demoAdminUsers`,
@@ -542,7 +558,20 @@ npm test         # Autenticación, favoritos, recetario, cocinero, multimedia y 
 npm run build    # Genera dist/
 npm run lint     # Revisa el código con ESLint
 npm run preview  # Sirve la compilación localmente después de build
+git diff --check
 ```
+
+La comprobación de experiencia en Chromium usa
+[`qa/recipe-experience.mjs`](qa/recipe-experience.mjs). Requiere Chrome,
+`playwright-core` (puede instalarse fuera del proyecto) y FFmpeg con `libx264`
+y `libvpx`. Configura `PLAYWRIGHT_MODULE` con la ruta absoluta a
+`playwright-core/index.mjs` y, si `ffmpeg` no está en `PATH`,
+`FFMPEG_EXECUTABLE` con su ruta. Inicia
+`npm run dev -- --host 127.0.0.1 --port 4177 --strictPort` y, en otra terminal,
+ejecuta `node qa/recipe-experience.mjs`.
+El script intercepta la API y multimedia y bloquea los demás orígenes;
+usa credenciales ficticias y no escribe en producción. Comprueba 320, 390,
+768 y 1440 px, incluidos foco, navegación, reenvío y reproducción MP4/WebM.
 
 En un servidor de producción, configura la entrega de `index.html` para las
 rutas del frontend que no sean archivos estáticos, de modo que React Router

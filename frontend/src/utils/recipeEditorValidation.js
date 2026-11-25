@@ -54,7 +54,7 @@ export function validateRecipeDraft(recipe) {
   }
   if (!Object.hasOwn(recipeTypes, recipe.type)) errors.type = 'Selecciona un tipo de receta.'
   const javaIntMax = 2147483647
-  if (!positiveInteger(recipe.baseServings, javaIntMax)) errors.baseServings = 'Escribe un entero entre 1 y 2 147 483 647.'
+  if (!positiveInteger(recipe.baseServings, javaIntMax)) errors.baseServings = 'Escribe un entero positivo válido (de 1 a 2 147 483 647).'
 
   for (const [field, limit] of Object.entries(maxItems)) {
     if (!Array.isArray(recipe[field]) || recipe[field].length > limit) errors[field] = `Se requiere una lista de hasta ${limit} elementos.`
@@ -99,12 +99,16 @@ export function validateRecipeDraft(recipe) {
   return errors
 }
 
-export function validateRecipeForReview(recipe, record) {
-  const errors = validateRecipeDraft(recipe)
+export function recipeReviewRequirements(recipe, record) {
+  const errors = {}
   if (!isReviewableRecipe(record)) errors.state = 'Solo se puede enviar un borrador o una receta rechazada que no esté dada de baja.'
-  if (!recipe.categories?.length) errors.categories ??= 'Selecciona al menos una categoría.'
-  if (!recipe.ingredients?.length) errors.ingredients ??= 'Agrega al menos un ingrediente.'
+  if (!recipe.categories?.length) errors.categories = 'Selecciona al menos una categoría.'
+  if (!recipe.ingredients?.length) errors.ingredients = 'Agrega al menos un ingrediente.'
   return errors
+}
+
+export function validateRecipeForReview(recipe, record) {
+  return { ...recipeReviewRequirements(recipe, record), ...validateRecipeDraft(recipe) }
 }
 
 export function draftFromDetail(recipe) {

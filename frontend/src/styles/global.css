@@ -275,3 +275,17 @@ a.site-button:hover {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+.share-recipe {
+  min-width: 0;
+  max-width: 28ch;
+}
+
+.share-recipe p {
+  margin: 0;
+  font-size: .875rem;
+  overflow-wrap: anywhere;
+}
+
+.share-recipe p:not(:empty) {
+  margin-block-start: 6px;
+}

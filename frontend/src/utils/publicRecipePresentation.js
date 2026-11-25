@@ -1,3 +1,5 @@
+import { isHttpsMediaUrl } from './recipeEditorValidation.js'
+
 const unitLabels = {
   G: ['g'],
   KG: ['kg'],
@@ -24,15 +26,10 @@ export function ingredientRows(ingredients, adjusted) {
 
 export function recipeImage(multimedia) {
   for (const item of [...multimedia].sort((a, b) => a.orden - b.orden)) {
-    if (item.tipo !== 'IMAGEN' || !item.url) continue
-    try {
-      const url = new URL(item.url)
-      const hostname = url.hostname.replace(/\.$/, '')
-      if (url.protocol === 'https:' && !url.username && !url.password && !/(^|\.)invalid$/.test(hostname)) {
-        return { src: url.href, alt: item.textoAlternativo?.trim() }
-      }
-    } catch {
-      // Skip malformed or missing image URLs.
+    if (item.tipo !== 'IMAGEN' || !isHttpsMediaUrl(item.url)) continue
+    const url = new URL(item.url)
+    if (!/(^|\.)invalid$/.test(url.hostname.replace(/\.$/, ''))) {
+      return { src: url.href, alt: item.textoAlternativo?.trim() }
     }
   }
   return null
