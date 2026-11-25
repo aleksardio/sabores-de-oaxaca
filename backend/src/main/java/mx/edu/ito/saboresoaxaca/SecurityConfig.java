@@ -40,6 +40,7 @@ class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/v1/public/health").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/recetas", "/api/v1/recetas/{id}", "/api/v1/categorias", "/api/v1/ingredientes").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/mis-recetas", "/api/v1/mis-recetas/{id}").authenticated()
+                .requestMatchers("/api/v1/admin/usuarios", "/api/v1/admin/usuarios/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/v1/mis-recetas").authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/v1/multimedia/uploads").hasRole("COCINERO")
                 .requestMatchers(HttpMethod.PUT, "/api/v1/mis-recetas/{id}").authenticated()
@@ -109,6 +110,8 @@ class SecurityConfig {
         source.registerCorsConfiguration("/api/v1/mis-recetas/*", privadas);
         source.registerCorsConfiguration("/api/v1/mis-recetas/*/enviar-revision", privadas);
         source.registerCorsConfiguration("/api/v1/moderacion/recetas/**", privadas);
+        source.registerCorsConfiguration("/api/v1/admin/usuarios", privadas);
+        source.registerCorsConfiguration("/api/v1/admin/usuarios/**", privadas);
 
         source.registerCorsConfiguration("/api/v1/**", config);
         return source;
