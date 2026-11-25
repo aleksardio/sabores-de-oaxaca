@@ -86,11 +86,16 @@ export function createAuthSession() {
 
   async function requestAuthenticated(user, path, options) {
     if (!token || snapshot.user !== user) throw new ApiError(401, expired)
+    const { discardStaleErrors, ...requestOptions } = options ?? {}
     try {
-      const result = await apiRequest(path, { ...options, token })
+      const result = await apiRequest(path, { ...requestOptions, token })
       if (snapshot.user !== user) throw new DOMException('La sesión cambió.', 'AbortError')
       return result
     } catch (error) {
+      if (discardStaleErrors) {
+        requestOptions.signal?.throwIfAborted()
+        if (snapshot.user !== user) throw new DOMException('La sesión cambió.', 'AbortError')
+      }
       // Un 401 tardío de una sesión anterior no debe cerrar la sesión actual.
       if (error instanceof ApiError && error.status === 401 && snapshot.user === user) {
         const notice = pendingLogout ? `${error.message} ${unconfirmed}` : error.message
@@ -109,6 +114,9 @@ export function createAuthSession() {
     signIn,
     signOut,
     requestAuthenticated,
+    requireFreshSignIn(user, notice) {
+      if (snapshot.user === user && token) clear(notice)
+    },
     leaveLocally() {
       if (!snapshot.logoutError) return false
       clear(`Saliste de este navegador. ${unconfirmed}`)

@@ -20,7 +20,7 @@ export default function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider value={{ ...snapshot, signIn: session.signIn, signOut, leaveLocally,
-      requestAuthenticated: session.requestAuthenticated }}>
+      requestAuthenticated: session.requestAuthenticated, requireFreshSignIn: session.requireFreshSignIn }}>
       {children}
     </AuthContext.Provider>
   )

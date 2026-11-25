@@ -33,7 +33,7 @@ export default function AdminRecipesPage() {
   return (
     <section className="cook-view" aria-labelledby="admin-recipes-title">
       <header>
-        <p className="admin-eyebrow">Bajas lógicas</p>
+        <p className="admin-eyebrow">Bajas lógicas · Demostración</p>
         <h1 id="admin-recipes-title">Administración de recetas</h1>
         <p className="cook-muted">Consulta ejemplos independientes del sitio público y de los otros paneles. La baja lógica (<code>eliminado_en</code>) se indica por separado del estado editorial.</p>
       </header>
