@@ -59,8 +59,7 @@ h1 {
 }
 
 .site-nav,
-.header-actions,
-.brand {
+.header-actions {
   display: flex;
   align-items: center;
 }
@@ -72,26 +71,22 @@ h1 {
   gap: 12px 24px;
   width: min(1320px, calc(100% - 2 * clamp(16px, 4.167vw, 60px)));
   min-height: 77px;
-  padding-block: 12px;
+  padding-block: 8px;
 }
 
 .brand {
-  gap: 10px;
-  color: var(--ink);
-  font: 700 24px/1.24 var(--font-display);
-  text-decoration: none;
+  display: block;
+  flex: none;
+  max-inline-size: 100%;
+  inline-size: clamp(7.375rem, 10vw + 3rem, 9.25rem);
+  border-radius: 6px;
 }
 
-.brand-mark {
-  display: grid;
-  flex: 0 0 42px;
-  width: 42px;
-  height: 42px;
-  place-items: center;
-  border-radius: 9px;
-  background: var(--clay);
-  color: #fff;
-  font: 700 24px/1 system-ui, sans-serif;
+.brand-logo {
+  display: block;
+  inline-size: 100%;
+  block-size: auto;
+  border-radius: 6px;
 }
 
 .site-nav,
@@ -233,6 +228,23 @@ a.site-button:hover {
 
 .site-footer p {
   margin: 0;
+}
+
+.footer-brand {
+  display: grid;
+  justify-items: start;
+  gap: 6px;
+}
+
+.footer-brand__link {
+  display: block;
+  inline-size: 7rem;
+  max-inline-size: 100%;
+  border-radius: 6px;
+}
+
+.footer-brand__link:focus-visible {
+  outline-color: var(--hero-surface);
 }
 
 .footer-content > p:last-child {

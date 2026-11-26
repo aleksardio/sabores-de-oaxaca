@@ -15,9 +15,9 @@
 }
 
 .cook-brand {
-  color: inherit;
-  font: 700 1.2rem/1.25 var(--font-display);
-  text-decoration: none;
+  display: block;
+  inline-size: min(100%, 10rem);
+  border-radius: 6px;
 }
 
 .cook-kicker {
@@ -418,6 +418,10 @@
   .cook-sidebar nav {
     flex-direction: row;
     flex-wrap: wrap;
+  }
+
+  .cook-brand {
+    inline-size: 8rem;
   }
 
   .cook-topbar {

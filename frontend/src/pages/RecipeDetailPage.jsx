@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import RecipeImage from '../components/RecipeImage.jsx'
+import PhotoCredits from '../components/PhotoCredits.jsx'
 import RecipeVideo from '../components/RecipeVideo.jsx'
 import FavoriteButton from '../components/FavoriteButton.jsx'
 import FavoritesStatus from '../components/FavoritesStatus.jsx'
@@ -12,6 +13,7 @@ import { usePublicRequest } from '../hooks/usePublicRequest.js'
 import { getRecipeById, parseRecipeId, recipeTypes } from '../services/recipesService.js'
 import { recipeImage } from '../utils/publicRecipePresentation.js'
 import { isHttpsMediaUrl } from '../utils/recipeEditorValidation.js'
+import { splitRecipeDescription } from '../utils/recipeDescription.js'
 import '../styles/recipe-detail.css'
 
 function RecipeIngredients({ recipe }) {
@@ -51,6 +53,7 @@ export default function RecipeDetailPage() {
 
   const type = recipeTypes.find(({ value }) => value === recipe.tipo)?.name
   const image = recipeImage(recipe.multimedia)
+  const { text, credits } = splitRecipeDescription(recipe.descripcion)
   const videos = recipe.multimedia.filter(({ tipo, url }) => tipo === 'VIDEO' && isHttpsMediaUrl(url))
     .sort((a, b) => a.orden - b.orden)
 
@@ -63,10 +66,13 @@ export default function RecipeDetailPage() {
       </header>
 
       <div className="detail-grid detail-grid--summary">
-        <RecipeImage key={image?.src ?? recipe.id} image={image} title={recipe.titulo} />
+        <figure className="detail-image">
+          <RecipeImage key={image?.src ?? recipe.id} image={image} title={recipe.titulo} />
+          {credits.length > 0 && <PhotoCredits credits={credits} />}
+        </figure>
         <section className="detail-panel detail-summary" aria-labelledby="detail-summary-title">
           <h2 id="detail-summary-title">Sobre la receta</h2>
-          {recipe.descripcion && <p>{recipe.descripcion}</p>}
+          {text && <p className="detail-description">{text}</p>}
           {type && <p className="detail-meta">{type}</p>}
           {recipe.categorias.length > 0 && (
             <p className="detail-meta">Categorías: {recipe.categorias.map(({ nombre }) => nombre).join(', ')}</p>

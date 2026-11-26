@@ -21,7 +21,8 @@
 }
 
 .auth-brand {
-  font: 700 clamp(22px, 2vw, 28px)/1.24 var(--font-display);
+  inline-size: clamp(9rem, 16vw, 14rem);
+  max-inline-size: 100%;
 }
 
 .auth-brand-tag {
@@ -203,6 +204,10 @@
   .auth-brand-panel {
     gap: 10px;
     padding: 18px clamp(20px, 6vw, 48px);
+  }
+
+  .auth-brand {
+    inline-size: 9rem;
   }
 
   .auth-brand-title,
