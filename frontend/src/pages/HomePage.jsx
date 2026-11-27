@@ -1,18 +1,53 @@
 import { Link } from 'react-router'
-import DishIllustration from '../components/DishIllustration.jsx'
+import PhotoCredits from '../components/PhotoCredits.jsx'
 import RecipeCard from '../components/RecipeCard.jsx'
 import ShareRecipeAction from '../components/ShareRecipeAction.jsx'
 import RequestError from '../components/RequestError.jsx'
 import { usePublicRequest } from '../hooks/usePublicRequest.js'
 import { useRecipeCovers } from '../hooks/useRecipeCovers.js'
-import { getRecipes } from '../services/recipesService.js'
+import { getRecipeById, getRecipes } from '../services/recipesService.js'
+import { recipeImage } from '../utils/publicRecipePresentation.js'
+import { splitRecipeDescription } from '../utils/recipeDescription.js'
 import '../styles/home.css'
 
 const loadRecipes = (signal) => getRecipes({ tamano: 3 }, signal)
+const traditional = 'TRADICIONAL_OAXAQUENA'
+const preferredRecipe = 9
+
+async function loadTraditionalPhoto(id, signal) {
+  try {
+    const recipe = await getRecipeById(id, undefined, signal)
+    const image = recipeImage(recipe.multimedia)
+    if (recipe.tipo !== traditional || !image) return null
+    const photo = new Image()
+    photo.src = image.src
+    await photo.decode()
+    return { recipe, image, credits: splitRecipeDescription(recipe.descripcion).credits }
+  } catch {
+    signal.throwIfAborted()
+    return null
+  }
+}
+
+async function loadHeroRecipe(signal) {
+  const preferred = await loadTraditionalPhoto(preferredRecipe, signal)
+  if (preferred) return preferred
+
+  for (let pagina = 0; ; pagina++) {
+    const result = await getRecipes({ tipo: traditional, pagina }, signal)
+    for (const { id } of result.contenido) {
+      if (id === preferredRecipe) continue
+      const featured = await loadTraditionalPhoto(id, signal)
+      if (featured) return featured
+    }
+    if (pagina + 1 >= result.totalPaginas) return null
+  }
+}
 
 export default function HomePage() {
   const { data, error, loading, retry } = usePublicRequest(loadRecipes)
   const covers = useRecipeCovers(data?.contenido, 'home')
+  const { data: hero, loading: loadingHero } = usePublicRequest(loadHeroRecipe)
   return (
     <>
       <section className="home-hero" aria-labelledby="home-title">
@@ -27,11 +62,30 @@ export default function HomePage() {
             <ShareRecipeAction className="site-button site-button--green">Compartir mi receta</ShareRecipeAction>
           </div>
         </div>
-        <DishIllustration label="Mole negro · tradición viva" tone="hero" decorative={false} />
+        {hero && (
+          <figure className="home-hero__feature">
+            <img src={hero.image.src} alt={hero.image.alt || hero.recipe.titulo} />
+            <div className="home-hero__recipe">
+              <div>
+                <p className="home-hero__tag">Tradicional oaxaqueña</p>
+                <h2>{hero.recipe.titulo}</h2>
+              </div>
+              <Link className="site-button" to={`/recetas/${hero.recipe.id}`}>Ver receta</Link>
+            </div>
+            {hero.credits.length > 0 && <PhotoCredits credits={hero.credits} />}
+          </figure>
+        )}
+        {loadingHero && <div className="home-hero__placeholder" aria-hidden="true" />}
       </section>
 
       <section className="home-featured" aria-labelledby="featured-title">
-        <h2 id="featured-title">Recetas para descubrir</h2>
+        <header className="home-featured__header">
+          <div>
+            <p className="home-hero__eyebrow">Del recetario</p>
+            <h2 id="featured-title">Recetas para descubrir</h2>
+          </div>
+          <Link className="site-button" to="/recetas">Ver catálogo de recetas</Link>
+        </header>
         <div className="home-featured__content">
           {loading && <p role="status">Cargando recetas…</p>}
           {error && <RequestError error={error} onRetry={retry} />}
@@ -40,7 +94,6 @@ export default function HomePage() {
               {data.contenido.map((recipe) => <RecipeCard key={recipe.id} recipe={recipe} image={covers?.[recipe.id]} />)}
             </ul>
           ) : <p role="status">Aún no hay recetas para descubrir.</p>)}
-          <Link to="/recetas">Ver catálogo de recetas</Link>
         </div>
       </section>
 

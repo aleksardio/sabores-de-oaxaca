@@ -1,90 +1,119 @@
 .traditions {
-  --traditions-muted: #6d594d;
   display: grid;
-  gap: clamp(2rem, 5vw, 4rem);
+  gap: clamp(2.5rem, 6vw, 4.75rem);
+  color: var(--ink);
 }
 
-.traditions :is(h1, h2, h3, p, ul) {
+.page:has(> .traditions) {
+  width: min(1296px, calc(100% - 2 * clamp(16px, 5vw, 72px)));
+  padding-block: clamp(1.25rem, 3vw, 2.75rem);
+}
+
+.traditions :is(h1, h2, h3, p, ul, figure) {
   margin: 0;
 }
 
 .traditions-hero {
   display: grid;
-  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
-  align-items: stretch;
-  gap: clamp(1.25rem, 3vw, 2.5rem);
-  padding: clamp(1.25rem, 3.5vw, 3rem);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.13fr);
+  align-items: center;
+  gap: clamp(1.5rem, 4vw, 3.5rem);
+  padding: clamp(1.25rem, 4vw, 3.5rem);
   border: 1px solid var(--border);
-  border-radius: 18px;
-  background: var(--hero-surface);
+  border-radius: 24px;
+  background:
+    linear-gradient(115deg, var(--hero-surface) 18%, #fcf2e5ad 68%, transparent),
+    var(--woven-pattern) 0 0 / 40px 40px,
+    var(--hero-surface);
 }
 
 .traditions-hero__content {
   display: grid;
-  align-content: center;
   justify-items: start;
-  gap: 0.9rem;
+  gap: 1.15rem;
 }
 
 .traditions-eyebrow {
   color: var(--accent);
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.13em;
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
+.traditions-eyebrow::before {
+  content: '';
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  margin-inline: 0.15rem 0.7rem;
+  border: 1px solid currentColor;
+  transform: rotate(45deg);
+}
+
 .traditions h1 {
-  max-width: 18ch;
-  font: 700 clamp(2rem, 4.4vw, 3.5rem)/1.08 var(--font-display);
+  max-width: 17ch;
+  font: 700 clamp(2rem, 4.6vw, 4.1rem)/1.08 var(--font-display);
+  text-wrap: balance;
 }
 
 .traditions-hero__intro,
 .traditions-regions__intro,
 .traditions-card p {
-  color: var(--traditions-muted);
+  color: #6d594d;
+}
+
+.traditions-hero__intro {
+  font-size: clamp(1rem, 1.5vw, 1.125rem);
 }
 
 .traditions-hero__actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem;
+  gap: 0.65rem;
 }
 
-.traditions .site-button {
-  min-height: 44px;
+.traditions-hero__photo {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: #fffaf3;
+  box-shadow: var(--editorial-shadow);
 }
 
-.traditions-hero__art {
-  display: grid;
-  min-height: clamp(10rem, 24vw, 17rem);
-  place-items: center;
-  border-radius: 14px;
-  background:
-    repeating-linear-gradient(45deg, transparent 0 17px, #fff1 17px 19px),
-    repeating-linear-gradient(-45deg, transparent 0 17px, #fff1 17px 19px),
-    linear-gradient(145deg, var(--ink), var(--clay));
+.traditions-hero__photo img,
+.traditions-card__image {
+  display: block;
+  width: 100%;
+  background: var(--linen);
+  object-fit: cover;
 }
 
-.traditions-hero__plate {
-  width: clamp(7.5rem, 14vw, 12rem);
-  aspect-ratio: 1;
-  border: 5px solid var(--hero-surface);
-  border-radius: 50%;
-  background:
-    radial-gradient(circle, #f0ba62 0 7%, transparent 8%),
-    repeating-conic-gradient(from 15deg, var(--accent) 0 15deg, #f0ba62 15deg 30deg);
-  box-shadow: inset 0 0 0 8px #f0ba62, 0 8px 18px #4d30245c;
+.traditions-hero__photo img {
+  aspect-ratio: 4 / 3;
+  border-radius: 17px 17px 0 0;
+}
+
+.traditions-hero__photo figcaption {
+  padding: 0.75rem 1rem;
+}
+
+.traditions-photo-credit {
+  display: block;
+  color: #6d594d;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
 }
 
 .traditions-regions {
   display: grid;
-  gap: 0.65rem;
+  gap: 0.6rem;
 }
 
 .traditions h2 {
   scroll-margin-block-start: 1rem;
-  font: 700 clamp(1.65rem, 3vw, 2.4rem)/1.16 var(--font-display);
+  font: 700 clamp(1.7rem, 3.5vw, 2.65rem)/1.16 var(--font-display);
 }
 
 .traditions h2:focus-visible {
@@ -95,8 +124,8 @@
 .traditions .traditions-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 1rem;
-  margin-block-start: 0.75rem;
+  gap: clamp(0.9rem, 2vw, 1.6rem);
+  margin-block-start: 1rem;
   padding: 0;
   list-style: none;
 }
@@ -105,63 +134,73 @@
   display: flex;
   min-width: 0;
   flex-direction: column;
-  padding: 0.75rem;
   border: 1px solid var(--border);
-  border-radius: 14px;
-  background: #fff;
+  border-radius: 18px;
+  background: #fffaf3;
+  box-shadow: var(--editorial-shadow);
 }
 
-.traditions-card__art {
-  height: 4.5rem;
-  border-radius: 8px;
+.traditions-card__image {
+  height: clamp(11rem, 16vw, 14rem);
+  border-radius: 17px 17px 0 0;
 }
 
-.traditions-card__art--sun {
-  background:
-    radial-gradient(circle at 72% 35%, #f0ba62 0 13px, transparent 14px),
-    linear-gradient(165deg, transparent 60%, #763c2e 61%),
-    linear-gradient(20deg, #a74a32 42%, transparent 43%),
-    #da8259;
-}
-
-.traditions-card__art--water {
-  background:
-    repeating-radial-gradient(ellipse at 30% 115%, transparent 0 11px, #f4ecdf65 12px 13px, transparent 14px 22px),
-    linear-gradient(125deg, #2b594d, #6e9a7d);
-}
-
-.traditions-card__art--hills {
-  background:
-    linear-gradient(160deg, transparent 58%, #2e6b4f 59%),
-    linear-gradient(25deg, #62866a 46%, transparent 47%),
-    linear-gradient(140deg, #f1dcb7, #d4b77d);
+.traditions-card__image[src$="/istmo.webp"] {
+  object-position: center 68%;
 }
 
 .traditions-card__content {
   display: flex;
   flex: 1;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 0.55rem;
-  padding: 0.8rem 0.25rem 0.25rem;
+  gap: 0.6rem;
+  padding: clamp(0.9rem, 2vw, 1.3rem);
 }
 
 .traditions-card h3 {
-  font: 700 1.3rem/1.2 var(--font-display);
+  font: 700 1.5rem/1.2 var(--font-display);
 }
 
 .traditions-card p {
-  font-size: 0.875rem;
+  font-size: 0.925rem;
 }
 
-@media (max-width: 60rem) {
+.traditions-card .traditions-card__place {
+  color: var(--green);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.traditions-card .traditions-photo-credit {
+  margin-top: auto;
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--border);
+}
+
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .traditions-card {
+    transition: box-shadow 180ms ease, transform 180ms ease;
+  }
+
+  .traditions-card:hover {
+    box-shadow: 0 15px 30px #4d30241f;
+    transform: translateY(-3px);
+  }
+}
+
+@media (max-width: 62rem) {
   .traditions .traditions-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-@media (max-width: 38rem) {
-  .traditions-hero,
+@media (max-width: 44rem) {
+  .traditions-hero {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 34rem) {
   .traditions .traditions-grid {
     grid-template-columns: minmax(0, 1fr);
   }
