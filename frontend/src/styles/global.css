@@ -12,6 +12,8 @@
   --linen: #f4ecdf;
   --border: #e5dbcc;
   --accent: #8d3828;
+  --editorial-shadow: 0 12px 30px #4d302410;
+  --woven-pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cpath d='M20 3 37 20 20 37 3 20Z M20 11 29 20 20 29 11 20Z' fill='none' stroke='%238d3828' stroke-opacity='.11'/%3E%3C/svg%3E");
 }
 
 * {
@@ -56,6 +58,7 @@ h1 {
 
 .site-header {
   background: #fff;
+  border-bottom: 1px solid var(--border);
 }
 
 .site-nav,
@@ -160,6 +163,38 @@ a.site-button:hover {
   text-decoration: underline;
 }
 
+.site-nav .site-button {
+  border-color: transparent;
+}
+
+.site-nav .site-button[aria-current="page"],
+.header-actions a[aria-current="page"] {
+  border-color: #dfc4b3;
+  background: var(--hero-surface);
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+}
+
+:is(.site-header, .page--home, .traditions) .site-button {
+  min-height: 44px;
+}
+
+@media (hover: hover) {
+  :is(.site-header, .page--home, .traditions) .site-button:not(:disabled):hover {
+    border-color: #dfc4b3;
+    background: var(--linen);
+  }
+
+  :is(.site-header, .page--home, .traditions) .site-button--clay:not(:disabled):hover {
+    background: var(--accent);
+  }
+
+  :is(.site-header, .page--home, .traditions) .site-button--green:not(:disabled):hover {
+    background: #23533d;
+  }
+}
+
 .site-button:disabled {
   cursor: not-allowed;
   opacity: 1;
@@ -210,6 +245,7 @@ a.site-button:hover {
 }
 
 .site-footer {
+  border-top: 3px solid #ac674b;
   background: var(--ink);
   color: var(--hero-surface);
   font-size: 13px;
@@ -220,10 +256,10 @@ a.site-button:hover {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px 24px;
+  gap: 16px 24px;
   flex-wrap: wrap;
   width: min(1308px, calc(100% - 2 * clamp(16px, 4.583vw, 66px)));
-  padding-block: 19px;
+  padding-block: 24px;
 }
 
 .site-footer p {
@@ -268,6 +304,11 @@ a.site-button:hover {
 
 .footer-nav a[aria-current="page"] {
   font-weight: 700;
+  text-decoration-thickness: 2px;
+}
+
+.footer-nav a:hover {
+  color: #f6d4ad;
 }
 
 @media (max-width: 56rem) {
@@ -285,6 +326,7 @@ a.site-button:hover {
 @media (max-width: 39rem) {
   .header-content {
     grid-template-columns: minmax(0, 1fr);
+    row-gap: 8px;
   }
 }
 .share-recipe {

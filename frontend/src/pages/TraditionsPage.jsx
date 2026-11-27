@@ -1,6 +1,15 @@
 import { Link } from 'react-router'
-import { regions } from '../data/regions.js'
+import { marketPhoto, regions } from '../data/regions.js'
 import '../styles/traditions.css'
+
+function PhotoAttribution({ photo }) {
+  return (
+    <small className="traditions-photo-credit">
+      Foto: {photo.author} · <a href={photo.source} aria-label={`Fuente de la fotografía: ${photo.place}`}>Commons</a>
+      {' · '}<a href={photo.terms}>{photo.license}</a> · Adaptada a WebP
+    </small>
+  )
+}
 
 export default function TraditionsPage() {
   return (
@@ -19,9 +28,13 @@ export default function TraditionsPage() {
             <Link className="site-button" to="/recetas">Ver catálogo de recetas</Link>
           </div>
         </div>
-        <div className="traditions-hero__art" aria-hidden="true">
-          <span className="traditions-hero__plate" />
-        </div>
+        <figure className="traditions-hero__photo">
+          <img src={marketPhoto.src} alt={marketPhoto.alt} />
+          <figcaption>
+            <strong>{marketPhoto.place}</strong>
+            <PhotoAttribution photo={marketPhoto} />
+          </figcaption>
+        </figure>
       </section>
 
       <section className="traditions-regions" aria-labelledby="regiones">
@@ -32,12 +45,14 @@ export default function TraditionsPage() {
           que por ahora no se puede filtrar por región.
         </p>
         <ul className="traditions-grid" role="list">
-          {regions.map(({ name, motif, description }) => (
+          {regions.map(({ name, photo, description }) => (
             <li className="traditions-card" key={name}>
-              <div className={`traditions-card__art traditions-card__art--${motif}`} aria-hidden="true" />
+              <img className="traditions-card__image" src={photo.src} alt={photo.alt} loading="lazy" decoding="async" />
               <div className="traditions-card__content">
                 <h3>{name}</h3>
+                <p className="traditions-card__place">{photo.place}</p>
                 <p>{description}</p>
+                <PhotoAttribution photo={photo} />
               </div>
             </li>
           ))}
