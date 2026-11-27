@@ -1,6 +1,7 @@
 import { Link } from 'react-router'
 import { useAuth } from '../auth/useAuth.js'
 import LogoutButton from '../components/LogoutButton.jsx'
+import CookRoleRequest from '../components/CookRoleRequest.jsx'
 import { canAdminister } from '../utils/adminAccess.js'
 import { canModerate } from '../utils/moderationAccess.js'
 import '../styles/community.css'
@@ -63,6 +64,7 @@ export default function ProfilePage() {
           </div>
         </section>
       )}
+      {user && <CookRoleRequest />}
     </section>
   )
 }

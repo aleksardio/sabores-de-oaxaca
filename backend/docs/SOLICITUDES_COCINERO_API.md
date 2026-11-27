@@ -1,0 +1,7 @@
+# Solicitudes de COCINERO
+
+Todas las rutas requieren Bearer JWT. `GET /api/v1/solicitud-cocinero` devuelve `200` con `{"solicitud":null}` si no existe, o con la última solicitud. `POST` a la misma ruta crea una solicitud `PENDIENTE` para el usuario autenticado, sin cuerpo; devuelve `200` con la solicitud. Un usuario con COCINERO o una solicitud pendiente recibe `409`; tras un rechazo puede solicitar otra vez. La cuenta debe estar activa.
+
+`GET /api/v1/admin/solicitudes-cocinero?pagina=0` requiere ADMIN y devuelve un arreglo de hasta 20 solicitudes pendientes, ordenadas por ID, con página desde cero. `POST /api/v1/admin/solicitudes-cocinero/{id}/aprobar` y `/rechazar`, también ADMIN y sin cuerpo, devuelven `200` con el estado resultante. La solicitud contiene `id`, `usuarioId`, `nombre`, `estado`, `creadaEn`, `resueltaEn`. `401`: sin sesión válida; `403`: sin permisos; `404`: solicitud inexistente; `409`: resuelta o cuenta inactiva. La aprobación conserva los demás roles y admite que COCINERO ya se haya asignado manualmente. El usuario debe volver a iniciar sesión para actualizar los roles mostrados en el cliente.
+
+V8 crea una tabla nueva, con una sola solicitud pendiente por usuario, fecha y administrador de resolución. La asignación y resolución comparten transacción. La concurrencia, migración y persistencia deben verificarse en MySQL 8 aislado antes de integrar o desplegar; no probar contra producción.

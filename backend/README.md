@@ -39,7 +39,7 @@ Las variables solo se establecen en la sesión actual; al terminar puede retirar
 la contraseña con `Remove-Item Env:DB_PASSWORD`. No incluir contraseñas reales en
 archivos ni comandos versionados. Para otras bases modifica `DB_URL` en la sesión.
 
-`dev` habilita Flyway y usa las migraciones existentes V1–V7; Spring Boot ordena
+`dev` habilita Flyway y usa las migraciones existentes V1–V8; Spring Boot ordena
 su inicialización antes de JPA. Hibernate usa `ddl-auto=validate`, nunca crea ni
 actualiza tablas. Las migraciones necesitan una base seleccionada y permisos
 apropiados; con una base no vacía sin historial Flyway, el arranque falla por
