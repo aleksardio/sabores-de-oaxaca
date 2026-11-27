@@ -90,13 +90,21 @@
   font: 700 22px/1.24 var(--font-display);
 }
 
-.featured-card p {
-  flex: 1;
+.featured-card__description {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+  max-block-size: 4.5em;
   color: var(--muted);
   font-size: 13px;
+  line-height: 1.5;
 }
 
-.featured-card__link {
-  align-self: flex-start;
+.featured-card__actions {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
   margin-block-start: auto;
 }

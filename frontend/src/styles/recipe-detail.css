@@ -63,9 +63,48 @@
 }
 
 .detail-photo {
+  display: block;
   width: 100%;
   border-radius: 14px;
   object-fit: cover;
+}
+
+.detail-image {
+  min-width: 0;
+  margin: 0;
+}
+
+.detail-photo-credits {
+  margin-block-start: 10px;
+  padding-inline-start: 10px;
+  border-inline-start: 2px solid var(--border);
+  color: var(--detail-muted);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.detail-photo-credits ul {
+  display: grid;
+  gap: 8px;
+  margin: 3px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.detail-photo-credits__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 12px;
+}
+
+.detail-photo-credits a {
+  color: var(--green);
+  text-decoration: underline;
+  text-underline-offset: 0.16em;
+}
+
+.detail-description {
+  white-space: pre-line;
 }
 
 .dish-art--detail .dish-art__plate {

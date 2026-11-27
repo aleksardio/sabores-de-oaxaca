@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { Link, Outlet, useLocation } from 'react-router'
+import BrandLogo from '../components/BrandLogo.jsx'
 import '../styles/cook-panel.css'
 
 export default function DemoPanelLayout({ className = '', title, kicker, navLabel, notice, children }) {
@@ -11,7 +12,7 @@ export default function DemoPanelLayout({ className = '', title, kicker, navLabe
   return (
     <div className={`cook-layout${className ? ` ${className}` : ''}`}>
       <aside className="cook-sidebar">
-        <Link className="cook-brand" to="/"><span aria-hidden="true">✦ </span>Sabores de Oaxaca</Link>
+        <Link className="cook-brand" to="/" aria-label="Sabores de Oaxaca, inicio"><BrandLogo decorative /></Link>
         <p className="cook-kicker">{kicker}</p>
         <nav aria-label={navLabel}>{children}</nav>
       </aside>

@@ -1,5 +1,6 @@
 import { Link, NavLink } from 'react-router'
 import { useAuth } from '../auth/useAuth.js'
+import BrandLogo from './BrandLogo.jsx'
 import LogoutButton from './LogoutButton.jsx'
 import ShareRecipeAction from './ShareRecipeAction.jsx'
 
@@ -9,9 +10,8 @@ export default function Navbar() {
   return (
     <header className="site-header">
       <div className="container header-content">
-        <Link className="brand" to="/">
-          <span className="brand-mark" aria-hidden="true">✦</span>
-          <span>Sabores de Oaxaca</span>
+        <Link className="brand" to="/" aria-label="Sabores de Oaxaca, inicio">
+          <BrandLogo decorative />
         </Link>
         <nav className="site-nav" aria-label="Navegación principal">
           <NavLink className="site-button" to="/" end>Inicio</NavLink>

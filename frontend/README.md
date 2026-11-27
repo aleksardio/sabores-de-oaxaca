@@ -73,6 +73,30 @@ que la sesión no es válida. Un 403 es falta de autorización, no un 401.
 Prueba también recargar directamente un detalle y navegar con una ventana
 estrecha: el menú debe ajustarse y las tarjetas deben reorganizarse.
 
+### Créditos de fotografía en recetas públicas
+
+La API sigue enviando `descripcion` como texto y `multimedia` con `id`,
+`tipo`, `url`, `textoAlternativo` y `orden`. No hay campos de atribución.
+Para nuevos lotes, escribe solo la descripción culinaria al principio y agrega
+el crédito en una línea independiente, después de una línea en blanco:
+
+```text
+Foto: «Título de la obra», Autor, Colección. CC BY-SA 4.0: https://creativecommons.org/licenses/by-sa/4.0/. Fuente: https://commons.wikimedia.org/wiki/File:Nombre.jpg — recortada y recodificada sin metadatos.
+```
+
+Usa el crédito y la licencia reales, y omite ` — modificaciones` si no hubo
+ninguna. Mantén `textoAlternativo` para describir la imagen, no para atribuirla.
+La tarjeta omite las líneas `Foto:` y las URL del texto, y muestra hasta tres
+líneas. En el detalle, la atribución reconocida se coloca bajo la imagen con
+enlaces etiquetados. Una línea `Foto:` no estructurada conserva su texto y, si
+contiene enlaces HTTPS válidos, los presenta como referencias.
+
+Es una convención de presentación, no una migración: no cambia el dato
+almacenado ni permite asociar formalmente créditos a IDs de multimedia. Usa
+la convención para la foto de portada; no presupongas que distingue varias
+fotos o videos. El editor, la API y otros consumidores siguen viendo el valor
+original. Atribuciones que no empiezan con `Foto:` no se reinterpretan.
+
 ### Panel del cocinero
 
 **Mis recetas** está en el perfil y en el pie público. **Compartir mi receta**
