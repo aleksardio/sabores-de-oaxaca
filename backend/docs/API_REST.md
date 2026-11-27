@@ -16,5 +16,5 @@ Base `/api/v1`. Los endpoints protegidos requieren `Authorization: Bearer <JWT>`
 | Recetas administrativas | `GET /admin/recetas`, `/{id}`; `POST /admin/recetas/{id}/baja`, `/restaurar` | ADMIN; acciones con `If-Match` y justificación. [Contrato](ADMIN_RECETAS_API.md). |
 
 La alerta SMS de reporte es un efecto opcional del backend, no una ruta REST:
-se activa por configuración y usa Twilio. Su aceptación no garantiza entrega;
-consultar [SMS](SMS_REPORTES_TWILIO.md). No hay integración WhatsApp.
+se activa por configuración y usa Infobip. Una respuesta HTTP no garantiza entrega;
+consultar [SMS](SMS_REPORTES_INFOBIP.md). No hay integración WhatsApp.

@@ -73,7 +73,7 @@ El entorno de despliegue del equipo usa `https://saboresdeoaxaca.food` (frontend
 ## Limitaciones y pendientes
 
 - La recuperación está deshabilitada por defecto. Requiere configuración explícita y un transporte SMTP verificado; el VPS de DigitalOcean tiene salida SMTP restringida. No se garantiza entrega a proveedores externos. Ver [recuperación](backend/docs/RECUPERACION_CONTRASENA_API.md).
-- El aviso SMS por reporte está implementado con Twilio, pero es opcional y está deshabilitado por defecto; su configuración y entrega efectiva dependen del entorno. No existe un endpoint público para enviar SMS. El inicio con Google no está implementado y WhatsApp está fuera del alcance.
+- El aviso SMS por reporte utiliza Infobip, es opcional y está deshabilitado por defecto; su configuración y entrega efectiva dependen del entorno. No existe un endpoint público para enviar SMS. El inicio con Google no está implementado y WhatsApp está fuera del alcance. Ver [configuración SMS](backend/docs/SMS_REPORTES_INFOBIP.md).
 - Catálogos y recetas del panel administrativo consultan la API. Se retiró el directorio público de autores de demostración; los autores reales de las recetas no se modificaron.
 - Las URL multimedia de los datos ficticios no son imágenes reales. El script demo prepara 13 recetas y 27 ingredientes; falta confirmar los mínimos oficiales de la asignación.
 - Sigue pendiente validar la recuperación de un respaldo MySQL en un esquema aislado, respaldar multimedia, comprobar controles contra abuso y repetir pruebas funcionales después de cada despliegue. No confundir «dump creado» con «restauración comprobada».

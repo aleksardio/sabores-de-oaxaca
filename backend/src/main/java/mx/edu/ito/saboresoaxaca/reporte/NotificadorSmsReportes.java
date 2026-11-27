@@ -10,13 +10,13 @@ import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.net.URI;
-import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.Base64;
+import java.util.List;
+import java.util.Map;
+import tools.jackson.databind.json.JsonMapper;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -32,16 +32,15 @@ import java.util.concurrent.TimeUnit;
 public class NotificadorSmsReportes {
     private static final Logger LOG = LoggerFactory.getLogger(NotificadorSmsReportes.class);
     private final boolean habilitado;
-    private final boolean modoPrueba;
-    private final String cuentaSid;
-    private final String token;
+    private final URI endpoint;
+    private final String apiKey;
     private final String origen;
     private final String destino;
     private final long intervaloNanos;
     private long ultimoAceptadoNanos;
     private boolean tieneUltimo;
-    private final HttpClient cliente = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(5)).build();
+    private final HttpClient cliente;
+    private final JsonMapper json = new JsonMapper();
     private final ThreadPoolExecutor cola = new ThreadPoolExecutor(
             1, 1, 0, TimeUnit.MILLISECONDS, new ArrayBlockingQueue<>(10), trabajo -> {
         Thread hilo = new Thread(trabajo, "sms-reportes");
@@ -49,29 +48,47 @@ public class NotificadorSmsReportes {
         return hilo;
     });
 
+    @org.springframework.beans.factory.annotation.Autowired
     public NotificadorSmsReportes(
             @Value("${app.sms.habilitado:false}") boolean habilitado,
-            @Value("${app.sms.modo-prueba:false}") boolean modoPrueba,
-            @Value("${app.sms.twilio.account-sid:}") String cuentaSid,
-            @Value("${app.sms.twilio.auth-token:}") String token,
-            @Value("${app.sms.twilio.from:}") String origen,
+            @Value("${app.sms.infobip.base-url:}") String baseUrl,
+            @Value("${app.sms.infobip.api-key:}") String apiKey,
+            @Value("${app.sms.infobip.sender:}") String origen,
             @Value("${app.sms.destino:}") String destino,
             @Value("${app.sms.intervalo-segundos:300}") long intervaloSegundos) {
+        this(habilitado, baseUrl, apiKey, origen, destino, intervaloSegundos,
+                HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).followRedirects(HttpClient.Redirect.NEVER).build());
+    }
+
+    NotificadorSmsReportes(boolean habilitado, String baseUrl, String apiKey, String origen,
+                           String destino, long intervaloSegundos, HttpClient cliente) {
         this.habilitado = habilitado;
-        this.modoPrueba = modoPrueba;
-        this.cuentaSid = cuentaSid.strip();
-        this.token = token.strip();
+        this.cliente = cliente;
+        this.apiKey = apiKey.strip();
         this.origen = origen.strip();
         this.destino = destino.strip();
         this.intervaloNanos = TimeUnit.SECONDS.toNanos(Math.max(60, intervaloSegundos));
-        if (habilitado && (!this.cuentaSid.matches("AC[0-9a-fA-F]{32}")
-                || this.token.isBlank() || !telefonoE164(this.origen) || !telefonoE164(this.destino))) {
-            throw new IllegalStateException("Configuración SMS incompleta o inválida; revisar variables del entorno.");
+        URI base = null;
+        try { if (!baseUrl.isBlank()) base = URI.create(baseUrl.strip()); }
+        catch (IllegalArgumentException ex) { if (habilitado) throw configuracionInvalida(); }
+        if (habilitado && (!baseValida(base) || !this.apiKey.matches("[\\x21-\\x7E]+")
+                || !this.origen.matches("[a-zA-Z0-9]{1,16}") || !telefonoInternacional(this.destino))) {
+            throw configuracionInvalida();
         }
+        this.endpoint = base == null || !baseValida(base) ? null : base.resolve("/sms/3/messages");
     }
 
-    private static boolean telefonoE164(String telefono) {
-        return telefono.matches("\\+[1-9][0-9]{7,14}");
+    private static IllegalStateException configuracionInvalida() {
+        return new IllegalStateException("Configuración SMS incompleta o inválida; revisar variables del entorno.");
+    }
+    private static boolean baseValida(URI base) {
+        return base != null && "https".equalsIgnoreCase(base.getScheme()) && base.getHost() != null
+                && base.getHost().toLowerCase(java.util.Locale.ROOT).matches("[a-z0-9-]+\\.api(?:-[a-z0-9-]+)?\\.infobip\\.com")
+                && base.getUserInfo() == null && base.getPort() == -1 && base.getQuery() == null && base.getFragment() == null
+                && (base.getPath().isEmpty() || "/".equals(base.getPath()));
+    }
+    private static boolean telefonoInternacional(String telefono) {
+        return telefono.matches("\\+?[1-9][0-9]{7,14}");
     }
 
     /** Solo se agenda cuando MySQL confirma el nuevo reporte. */
@@ -94,25 +111,23 @@ public class NotificadorSmsReportes {
 
     private void enviar(ReporteCreadoEvento evento) {
         try {
-            // Una cuenta Twilio Trial solo admite identificadores de plantillas predefinidas.
-            String cuerpo = modoPrueba ? "sms_internal_alerts"
-                    : "Sabores de Oaxaca: nuevo reporte #" + evento.reporteId()
+            String cuerpo = "Sabores de Oaxaca: nuevo reporte #" + evento.reporteId()
                     + " de receta #" + evento.recetaId() + ". Revisa el panel de moderacion.";
-            String formulario = campo("To", destino) + "&" + campo("From", origen) + "&" + campo("Body", cuerpo);
-            String credenciales = cuentaSid + ":" + token;
-            String autenticacion = Base64.getEncoder().encodeToString(credenciales.getBytes(StandardCharsets.UTF_8));
-            HttpRequest solicitud = HttpRequest.newBuilder(
-                            URI.create("https://api.twilio.com/2010-04-01/Accounts/" + cuentaSid + "/Messages.json"))
+            String payload = json.writeValueAsString(Map.of("messages", List.of(Map.of(
+                    "sender", origen, "destinations", List.of(Map.of("to", destino.replaceFirst("^\\+", ""))),
+                    "content", Map.of("text", cuerpo)))));
+            HttpRequest solicitud = HttpRequest.newBuilder(endpoint)
                     .timeout(Duration.ofSeconds(15))
-                    .header("Authorization", "Basic " + autenticacion)
-                    .header("Content-Type", "application/x-www-form-urlencoded")
-                    .POST(HttpRequest.BodyPublishers.ofString(formulario))
+                    .header("Authorization", "App " + apiKey)
+                    .header("Content-Type", "application/json")
+                    .header("Accept", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(payload))
                     .build();
             HttpResponse<Void> respuesta = cliente.send(solicitud, HttpResponse.BodyHandlers.discarding());
             if (respuesta.statusCode() >= 200 && respuesta.statusCode() < 300) {
-                LOG.info("Solicitud de SMS aceptada por proveedor para el reporte {}", evento.reporteId());
+                LOG.info("Infobip respondió HTTP {} para el reporte {}; la entrega no está confirmada", respuesta.statusCode(), evento.reporteId());
             } else {
-                LOG.warn("Twilio rechazó la solicitud SMS con HTTP {}", respuesta.statusCode());
+                LOG.warn("Infobip rechazó la solicitud SMS con HTTP {}", respuesta.statusCode());
             }
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
@@ -120,11 +135,6 @@ public class NotificadorSmsReportes {
         } catch (Exception ex) {
             LOG.warn("No se pudo contactar con el proveedor SMS: {}", ex.getClass().getSimpleName());
         }
-    }
-
-    private static String campo(String nombre, String valor) {
-        return URLEncoder.encode(nombre, StandardCharsets.UTF_8) + "="
-                + URLEncoder.encode(valor, StandardCharsets.UTF_8);
     }
 
     @PreDestroy

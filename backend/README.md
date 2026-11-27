@@ -62,7 +62,7 @@ favoritos, moderación, reportes y administración requieren persistencia, no
 `bootstrap`. El [índice REST](docs/API_REST.md) enlaza los contratos y permisos.
 Recuperación por correo y alertas SMS son opcionales y están deshabilitadas por
 defecto; su configuración se mantiene fuera del repositorio. Véanse
-[correo](docs/CORREO_RECUPERACION.md) y [SMS](docs/SMS_REPORTES_TWILIO.md).
+[correo](docs/CORREO_RECUPERACION.md) y [SMS con Infobip](docs/SMS_REPORTES_INFOBIP.md).
 
 ## Pruebas
 
