@@ -1,13 +1,14 @@
 import { Link, Navigate, useLocation } from 'react-router'
 import { useAuth } from '../auth/useAuth.js'
 import AuthForm from '../components/AuthForm.jsx'
+import GoogleLoginButton from '../components/GoogleLoginButton.jsx'
 import { getAuthDestination } from '../utils/authDestination.js'
 import { validateLogin } from '../utils/authValidation.js'
 
 const fields = ['email', 'password']
 
 export default function LoginPage() {
-  const { user, signIn, notice } = useAuth()
+  const { user, signIn, signInWithGoogle, notice } = useAuth()
   const { state } = useLocation()
   const destination = getAuthDestination(state?.from)
 
@@ -22,6 +23,7 @@ export default function LoginPage() {
         <Link className="site-button" to="/recuperar-contrasena" state={{ from: destination }}>¿Olvidaste tu contraseña?</Link>
         <Link className="site-button" to="/registro" state={{ from: destination }}>Crear cuenta nueva</Link>
       </AuthForm>
+      <GoogleLoginButton onSignIn={signInWithGoogle} />
     </section>
   )
 }

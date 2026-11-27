@@ -28,6 +28,28 @@ export async function login(values, signal) {
   return result
 }
 
+export async function loginGoogle(credential, signal) {
+  const result = await apiRequest('/auth/google', {
+    method: 'POST',
+    body: { credential },
+    signal,
+    errors: {
+      401: 'Google no pudo verificar tu identidad. Inténtalo nuevamente.',
+      409: 'Este correo ya tiene una cuenta. Inicia sesión con tu contraseña.',
+      503: 'El inicio de sesión con Google no está disponible.',
+    },
+  })
+
+  if (typeof result?.token !== 'string' || !result.token
+    || result.tipo !== 'Bearer'
+    || !Number.isInteger(result.expiraEnSegundos)
+    || result.expiraEnSegundos <= 0) {
+    throw new ApiError(200, 'El servidor no devolvió una sesión válida.')
+  }
+
+  return result
+}
+
 function requireToken(token) {
   if (!token) throw new ApiError(401, 'Tu sesión ya no es válida. Vuelve a iniciar sesión.')
 }

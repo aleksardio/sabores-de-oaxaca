@@ -54,6 +54,7 @@ class SecurityConfig {
                 .requestMatchers("/api/v1/moderacion/recetas", "/api/v1/moderacion/recetas/**").authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/v1/auth/registro").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/v1/auth/google").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/v1/auth/recuperar-contrasena", "/api/v1/auth/restablecer-contrasena").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/auth/me").authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/v1/auth/logout").authenticated()

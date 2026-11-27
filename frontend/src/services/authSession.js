@@ -28,7 +28,7 @@ export function createAuthSession() {
     update({ ...emptySession, notice })
   }
 
-  async function signIn(values, signal) {
+  async function completeSignIn(loginRequest, signal) {
     if (token || (pendingLogin && !pendingLogin.signal.aborted)) {
       throw new ApiError(0, 'Ya hay una sesión activa o un inicio de sesión en curso.')
     }
@@ -40,7 +40,7 @@ export function createAuthSession() {
     pendingLogin = attempt
     const requestSignal = attempt.signal
     try {
-      const result = await authService.login(values, requestSignal)
+      const result = await loginRequest(requestSignal)
       requestSignal.throwIfAborted()
       const deadline = Date.now() + result.expiraEnSegundos * 1000
       const user = await authService.getProfile(result.token, requestSignal)
@@ -59,6 +59,16 @@ export function createAuthSession() {
       // El JWT provisional de login nunca entra a la sesión si /me falla.
       if (pendingLogin === attempt) pendingLogin = undefined
     }
+  }
+
+  function signIn(values, signal) {
+    return completeSignIn(
+      (requestSignal) => authService.login(values, requestSignal), signal)
+  }
+
+  function signInWithGoogle(credential, signal) {
+    return completeSignIn(
+      (requestSignal) => authService.loginGoogle(credential, requestSignal), signal)
   }
 
   async function signOut() {
@@ -112,6 +122,7 @@ export function createAuthSession() {
       return () => listeners.delete(listener)
     },
     signIn,
+    signInWithGoogle,
     signOut,
     requestAuthenticated,
     requireFreshSignIn(user, notice) {
