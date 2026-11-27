@@ -22,7 +22,7 @@
   border: 1px solid var(--border);
   border-radius: 24px;
   background:
-    linear-gradient(115deg, var(--hero-surface) 18%, #fcf2e5ad 68%, transparent),
+    linear-gradient(115deg, var(--hero-surface) 18%, #fbefdcad 68%, transparent),
     var(--woven-pattern) 0 0 / 40px 40px,
     var(--hero-surface);
 }
@@ -60,7 +60,7 @@
 .traditions-hero__intro,
 .traditions-regions__intro,
 .traditions-card p {
-  color: #6d594d;
+  color: var(--muted);
 }
 
 .traditions-hero__intro {
@@ -77,7 +77,7 @@
   min-width: 0;
   border: 1px solid var(--border);
   border-radius: 18px;
-  background: #fffaf3;
+  background: var(--surface);
   box-shadow: var(--editorial-shadow);
 }
 
@@ -100,7 +100,7 @@
 
 .traditions-photo-credit {
   display: block;
-  color: #6d594d;
+  color: var(--muted);
   font-size: 0.75rem;
   line-height: 1.5;
   overflow-wrap: anywhere;
@@ -136,7 +136,7 @@
   flex-direction: column;
   border: 1px solid var(--border);
   border-radius: 18px;
-  background: #fffaf3;
+  background: var(--surface);
   box-shadow: var(--editorial-shadow);
 }
 
@@ -183,7 +183,7 @@
   }
 
   .traditions-card:hover {
-    box-shadow: 0 15px 30px #4d30241f;
+    box-shadow: 0 15px 30px #40281f26;
     transform: translateY(-3px);
   }
 }

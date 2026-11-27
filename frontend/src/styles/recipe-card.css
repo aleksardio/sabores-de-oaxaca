@@ -9,18 +9,18 @@
   gap: 5px;
   padding-inline: 8px;
   border-radius: 14px;
-  background: linear-gradient(150deg, var(--clay), #f2a93b 75%);
+  background: var(--woven-pattern) 0 0 / 40px 40px, linear-gradient(150deg, var(--ink), var(--clay));
   color: #fff;
   font: 700 18px/1.24 var(--font-display);
   text-align: center;
 }
 
 .dish-art--green {
-  background: linear-gradient(150deg, var(--green), #f2a93b 75%);
+  background: linear-gradient(150deg, var(--ink), var(--green));
 }
 
 .dish-art--brown-gold {
-  background: linear-gradient(150deg, var(--ink), #f2a93b 75%);
+  background: linear-gradient(150deg, var(--ink), var(--accent));
 }
 
 .dish-art--green-clay {
@@ -36,7 +36,7 @@
 .dish-art__plate {
   width: 54px;
   height: 54px;
-  border: 6px solid #fff;
+  border: 6px solid var(--gold);
   background: var(--hero-surface);
 }
 
@@ -52,10 +52,11 @@
   gap: 8px;
   min-width: 0;
   overflow-wrap: anywhere;
-  padding: 15px;
+  padding: clamp(0.75rem, 1.4vw, 1rem);
   border: 1px solid var(--border);
-  border-radius: 14px;
-  background: #fff;
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: var(--editorial-shadow);
 }
 
 .featured-card__tags {
@@ -66,24 +67,36 @@
   font-weight: 600;
 }
 
+.featured-card :is(.featured-card__photo, .dish-art) {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  border-radius: 12px;
+}
+
 .featured-card__photo {
   display: block;
-  width: 100%;
-  height: 143px;
-  object-fit: cover;
-  border-radius: 14px;
 }
 
 .featured-card__tags span {
-  padding: 7px 11px;
+  padding: 5px 9px;
   border-radius: 999px;
-  background: var(--linen);
+}
+
+.featured-card__tags [data-recipe-type='TRADICIONAL_OAXAQUENA'] {
+  background: var(--green-tint);
   color: var(--green);
 }
 
-.featured-card__tags span + span {
-  background: var(--hero-surface);
-  color: var(--clay);
+.featured-card__tags [data-recipe-type='COMUN'] {
+  background: var(--clay-tint);
+  color: var(--accent);
+}
+
+.featured-card__tags .featured-card__category {
+  background: var(--gold-tint);
+  color: var(--ink);
 }
 
 .featured-card h3 {
@@ -103,8 +116,29 @@
 }
 
 .featured-card__actions {
-  display: grid;
-  justify-items: start;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
   gap: 8px;
   margin-block-start: auto;
+  padding-block-start: 0.35rem;
+}
+
+.featured-card__actions .site-button {
+  min-block-size: 44px;
+}
+
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .featured-card {
+    transition: box-shadow 180ms ease, transform 180ms ease;
+  }
+
+  .featured-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 11px 25px #40281f2e;
+  }
+
+  .featured-card__actions .site-button {
+    transition: background-color 150ms ease, border-color 150ms ease;
+  }
 }

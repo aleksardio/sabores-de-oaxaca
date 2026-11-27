@@ -10,14 +10,27 @@
 }
 
 .favorite-button {
+  --button-hover: var(--clay-tint);
   align-self: flex-start;
   min-height: 44px;
+  color: var(--accent);
+}
+
+.favorite-button__icon {
+  width: 1rem;
+  height: 1rem;
+  flex: none;
 }
 
 .favorite-button[data-favorite='true'] {
-  border-color: var(--green);
-  background: var(--linen);
-  color: var(--green);
+  --button-hover: var(--accent);
+  border-color: var(--clay);
+  background: var(--clay);
+  color: #fff;
+}
+
+.favorite-button[data-favorite='true'] .favorite-button__icon {
+  fill: currentColor;
 }
 
 .favorite-button:disabled {

@@ -19,7 +19,7 @@
   border: 1px solid var(--border);
   border-radius: 24px;
   background:
-    linear-gradient(110deg, var(--hero-surface) 22%, #fcf2e5b8 70%, transparent),
+    linear-gradient(110deg, var(--hero-surface) 22%, #fbefdcb8 70%, transparent),
     var(--woven-pattern) 0 0 / 40px 40px,
     var(--hero-surface);
 }
@@ -48,7 +48,7 @@
   display: inline-block;
   width: 1.4rem;
   margin-inline-end: 0.6rem;
-  border-top: 2px solid #ac674b;
+  border-top: 2px solid var(--clay);
   vertical-align: middle;
 }
 
@@ -60,7 +60,7 @@
 
 .home-hero .home-hero__intro {
   max-width: 42ch;
-  color: #6d594d;
+  color: var(--muted);
   font-size: clamp(1rem, 1.5vw, 1.125rem);
 }
 
@@ -75,7 +75,7 @@
   margin: 0;
   border: 1px solid var(--border);
   border-radius: 18px;
-  background: #fffaf3;
+  background: var(--surface);
   box-shadow: var(--editorial-shadow);
 }
 
@@ -104,6 +104,7 @@
 
 .home-hero__recipe {
   padding: 0.95rem 1.1rem;
+  background: var(--gold-tint);
 }
 
 .home-hero__recipe h2 {
@@ -136,21 +137,6 @@
   list-style: none;
 }
 
-.home-featured .featured-card {
-  padding: clamp(0.75rem, 1.4vw, 1rem);
-  border-radius: 18px;
-  background: #fffaf3;
-  box-shadow: var(--editorial-shadow);
-}
-
-.home-featured :is(.featured-card__photo, .dish-art) {
-  height: clamp(10rem, 16vw, 13rem);
-}
-
-.home-featured .featured-card__description {
-  color: #6d594d;
-}
-
 .home-regions {
   display: flex;
   align-items: center;
@@ -160,7 +146,7 @@
   padding: clamp(1rem, 2.5vw, 2rem);
   border: 1px solid var(--border);
   border-radius: 16px;
-  background: var(--linen);
+  background: var(--green-tint);
 }
 
 .home-regions h2 {

@@ -94,7 +94,11 @@ export default function RecipesPage() {
       }}>
         <label className="catalog-sr-only" htmlFor="recipe-search">Buscar por título</label>
         <div className="catalog-search__field">
-          <span aria-hidden="true">⌕</span>
+          <svg className="catalog-search__icon" viewBox="0 0 24 24" aria-hidden="true"
+            fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+            <circle cx="10.5" cy="10.5" r="5.75" />
+            <path d="m15 15 4.5 4.5" />
+          </svg>
           <input id="recipe-search" ref={searchInput} type="search" maxLength={200}
             value={search.draft} onChange={(event) => setSearch({ title: titulo, draft: event.target.value })}
             placeholder="Título de la receta..." />
