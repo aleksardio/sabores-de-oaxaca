@@ -213,3 +213,62 @@ test('solo se conservan destinos internos conocidos, incluidos búsqueda y fragm
     assert.equal(getAuthDestination(unsafe), '/perfil')
   }
 })
+
+test('Google: crea la sesión solo después de verificar /me', async (t) => {
+  const fetch = mockFetch(t, loginResponse(), Response.json(profile))
+  const session = sessionFor(t)
+
+  await session.signInWithGoogle('credencial-google-prueba')
+
+  assert.deepEqual(session.getSnapshot().user, profile)
+  assert.doesNotMatch(
+    JSON.stringify(session.getSnapshot()),
+    /token-ficticio|credencial-google-prueba/
+  )
+
+  verifyRequest(
+    fetch.mock.calls[0],
+    'google',
+    'POST',
+    { credential: 'credencial-google-prueba' }
+  )
+  verifyRequest(
+    fetch.mock.calls[1],
+    'me',
+    'GET',
+    undefined,
+    `Bearer ${token}`
+  )
+  assert.equal(fetch.mock.callCount(), 2)
+})
+
+test('Google: correo existente muestra conflicto sin crear sesión', async (t) => {
+  const fetch = mockFetch(t, new Response(null, { status: 409 }))
+  const session = sessionFor(t)
+
+  await assert.rejects(
+    session.signInWithGoogle('credencial-google-prueba'),
+    { status: 409, message: /ya tiene una cuenta/ }
+  )
+
+  assert.equal(session.getSnapshot().user, null)
+  assert.equal(fetch.mock.callCount(), 1)
+})
+
+test('Google: no conserva un JWT si /me rechaza la sesión', async (t) => {
+  const fetch = mockFetch(
+    t,
+    loginResponse(),
+    new Response(null, { status: 401 })
+  )
+  const session = sessionFor(t)
+
+  await assert.rejects(
+    session.signInWithGoogle('credencial-google-prueba'),
+    { status: 401 }
+  )
+
+  assert.equal(session.getSnapshot().user, null)
+  assert.equal(await session.signOut(), false)
+  assert.equal(fetch.mock.callCount(), 2)
+})

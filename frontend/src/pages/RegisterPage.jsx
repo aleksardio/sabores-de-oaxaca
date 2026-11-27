@@ -1,6 +1,8 @@
 import { useState } from 'react'
-import { Link, useLocation } from 'react-router'
+import { Link, Navigate, useLocation } from 'react-router'
 import AuthForm from '../components/AuthForm.jsx'
+import GoogleLoginButton from '../components/GoogleLoginButton.jsx'
+import { useAuth } from '../auth/useAuth.js'
 import { register } from '../services/authService.js'
 import { getAuthDestination } from '../utils/authDestination.js'
 import { validateRegistration } from '../utils/authValidation.js'
@@ -9,8 +11,11 @@ const fields = ['displayName', 'email', 'password', 'confirmation']
 
 export default function RegisterPage() {
   const [registered, setRegistered] = useState(false)
+  const { user, signInWithGoogle } = useAuth()
   const { state } = useLocation()
   const loginState = { from: getAuthDestination(state?.from) }
+
+  if (user) return <Navigate to={loginState.from} replace />
 
   if (registered) {
     return (
@@ -29,6 +34,7 @@ export default function RegisterPage() {
       <AuthForm fields={fields} validate={validateRegistration} onSubmit={register} onSuccess={() => setRegistered(true)} submitLabel="Crear mi cuenta" pendingLabel="Creando cuenta…">
         <Link className="site-button" to="/login" state={loginState}>Ya tengo cuenta: iniciar sesión</Link>
       </AuthForm>
+      <GoogleLoginButton onSignIn={signInWithGoogle} />
     </section>
   )
 }

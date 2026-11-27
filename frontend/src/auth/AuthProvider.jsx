@@ -19,7 +19,7 @@ export default function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ ...snapshot, signIn: session.signIn, signOut, leaveLocally,
+    <AuthContext.Provider value={{ ...snapshot, signIn: session.signIn, signInWithGoogle: session.signInWithGoogle, signOut, leaveLocally,
       requestAuthenticated: session.requestAuthenticated, requireFreshSignIn: session.requireFreshSignIn }}>
       {children}
     </AuthContext.Provider>

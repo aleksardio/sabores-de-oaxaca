@@ -49,6 +49,25 @@ public class AutenticacionServicio {
         return new LoginRespuesta(token, "Bearer", duracion);
     }
 
+
+    public LoginRespuesta emitirSesion(Usuario usuario) {
+        Instant ahora = Instant.now();
+        JwtClaimsSet claims = JwtClaimsSet.builder()
+                .issuer(emisor)
+                .audience(List.of(audiencia))
+                .subject(usuario.getId().toString())
+                .issuedAt(ahora)
+                .expiresAt(ahora.plusSeconds(duracion))
+                .claim("version_tokens", usuario.getVersionTokens())
+                .build();
+
+        String token = jwt.encode(JwtEncoderParameters.from(
+                JwsHeader.with(MacAlgorithm.HS256).build(), claims))
+                .getTokenValue();
+
+        return new LoginRespuesta(token, "Bearer", duracion);
+    }
+
     @Transactional(readOnly = true)
     public PerfilRespuesta perfil(Jwt token) {
         long id;
