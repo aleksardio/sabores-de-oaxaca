@@ -27,6 +27,7 @@ export default function AdminPanelLayout() {
       notice="Consulta y administra los datos disponibles en el servidor."
     >
       <NavLink to="/admin/usuarios">Usuarios</NavLink>
+      <NavLink to="/admin/solicitudes-cocinero">Solicitudes de cocinero</NavLink>
       <NavLink to="/admin/catalogos">Catálogos</NavLink>
       <NavLink to="/admin/recetas">Recetas</NavLink>
       {canModerate(user) && <Link to="/moderador">Panel del moderador</Link>}

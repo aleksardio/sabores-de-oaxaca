@@ -13,6 +13,7 @@ Base `/api/v1`. Los endpoints protegidos requieren `Authorization: Bearer <JWT>`
 | Moderación | `GET /moderacion/recetas`, `/{id}`; `POST /moderacion/recetas/{id}/aprobar`, `/rechazar` | MODERADOR o ADMIN, sujeto a conflictos de interés. [Contrato](MODERACION_API.md). |
 | Reportes | `POST /recetas/{id}/reportes`; `GET /moderacion/reportes`, `/{id}`; `POST /moderacion/reportes/{id}/descartar`, `/dar-baja` | Crear requiere autenticación; resolver requiere MODERADOR o ADMIN y ausencia de conflicto. [Contrato](REPORTES_API.md). |
 | Usuarios administrativos | `GET /admin/usuarios`, `/{id}`; `PUT` y `DELETE /admin/usuarios/{id}/roles/cocinero` | ADMIN. [Contrato](ADMIN_USUARIOS_API.md). |
+| Solicitudes de cocinero | `GET` y `POST /solicitud-cocinero`; `GET /admin/solicitudes-cocinero`; `POST /admin/solicitudes-cocinero/{id}/aprobar`, `/rechazar` | Solicitud propia autenticada; decisiones ADMIN. [Contrato](SOLICITUDES_COCINERO_API.md). |
 | Recetas administrativas | `GET /admin/recetas`, `/{id}`; `POST /admin/recetas/{id}/baja`, `/restaurar` | ADMIN; acciones con `If-Match` y justificación. [Contrato](ADMIN_RECETAS_API.md). |
 
 La alerta SMS de reporte es un efecto opcional del backend, no una ruta REST:

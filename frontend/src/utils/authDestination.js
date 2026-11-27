@@ -1,7 +1,7 @@
 const publicDestination = /^\/(?:perfil|favoritos|recetas(?:\/[\w-]+)?|tradiciones|autores(?:\/[\w-]+)?)?$/
 const cookDestination = /^\/cocinero(?:\/recetas(?:\/(?:nueva|[1-9]\d*\/(?:editar|vista-previa)))?)?\/?$/
 const moderationDestination = /^\/moderador(?:\/(?:recetas|reportes)(?:\/[1-9]\d*)?)?\/?$/
-const adminDestination = /^\/admin(?:\/(?:usuarios(?:\/[1-9]\d*)?|catalogos|recetas))?\/?$/
+const adminDestination = /^\/admin(?:\/(?:usuarios(?:\/[1-9]\d*)?|catalogos|recetas|solicitudes-cocinero))?\/?$/
 
 export function getAuthDestination(value) {
   if (typeof value !== 'string' || !value.startsWith('/') || /[\s\\]/u.test(value)) return '/perfil'

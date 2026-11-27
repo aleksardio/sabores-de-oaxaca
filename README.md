@@ -6,7 +6,7 @@ Aplicación web para descubrir, compartir y moderar recetas oaxaqueñas. Incluye
 
 - **Frontend:** React 19 y Vite, con cliente HTTP para la API.
 - **Backend:** Java 17, Spring Boot 4.1.2, Spring Security, JWT, BCrypt, Bean Validation y Spring Data JPA. Controladores, DTOs, servicios transaccionales y repositorios separan las responsabilidades.
-- **Datos:** MySQL 8.0 y migraciones Flyway V1–V7; archivos multimedia externos referenciados mediante HTTPS.
+- **Datos:** MySQL 8.0 y migraciones Flyway V1–V8; archivos multimedia externos referenciados mediante HTTPS.
 - **Despliegue en VPS:** frontend y API detrás de Nginx con HTTPS en `https://saboresdeoaxaca.food`. El equipo comprobó la API pública y el frontend desplegados; la validación debe repetirse después de cada actualización. Los archivos subidos usan almacenamiento persistente independiente del repositorio y de `dist`.
 
 La API expone `/api/v1`. Las rutas públicas permiten consultar recetas publicadas visibles, categorías e ingredientes. La autorización se comprueba en el servidor; el frontend no sustituye sus reglas. Los contratos específicos están en [`backend/docs/`](backend/docs/).
