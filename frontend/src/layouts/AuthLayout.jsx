@@ -19,15 +19,12 @@ export default function AuthLayout() {
   return (
     <div className="auth-layout">
       <div className="auth-brand-panel">
-        <div className="auth-brand"><BrandLogo /></div>
         <p className="auth-brand-tag">Cocina · Memoria · Comunidad</p>
         <p className="auth-brand-title">Cuida el recetario de Oaxaca.</p>
         <p className="auth-brand-description">
           Conecta con los sabores que nos identifican y comparte lo mejor de nuestra gastronomía.
         </p>
-        <div className="auth-illustration" aria-hidden="true">
-          Sabores que nos unen
-        </div>
+        <div className="auth-brand"><BrandLogo /></div>
       </div>
       <main className="auth-main" ref={mainRef}>
         <Link className="site-button auth-back" to="/"><span aria-hidden="true">←</span> Volver al inicio</Link>

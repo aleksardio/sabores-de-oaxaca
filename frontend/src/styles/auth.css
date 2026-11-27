@@ -21,8 +21,11 @@
 }
 
 .auth-brand {
-  inline-size: clamp(9rem, 16vw, 14rem);
-  max-inline-size: 100%;
+  align-self: center;
+  inline-size: min(100%, 30rem);
+  padding: clamp(16px, 3vw, 32px);
+  border-radius: 14px;
+  background: #fdfbf8;
 }
 
 .auth-brand-tag {
@@ -46,40 +49,6 @@
   color: var(--border);
   font-size: clamp(16px, 1.39vw, 20px);
   line-height: 1.24;
-}
-
-.auth-illustration {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  width: min(100%, 480px);
-  aspect-ratio: 8 / 5;
-  border-radius: 14px;
-  background: linear-gradient(135deg, var(--clay), #f2a93b 78%);
-  font: 700 17px/1.24 var(--font-display);
-  text-align: center;
-  text-shadow: 0 1px 3px var(--ink);
-}
-
-.auth-illustration::before,
-.auth-illustration::after {
-  content: '';
-  order: -1;
-  aspect-ratio: 1;
-  border-radius: 50%;
-}
-
-.auth-illustration::before {
-  width: 22%;
-  border: 5px solid #fff;
-  background: var(--hero-surface);
-}
-
-.auth-illustration::after {
-  width: 7.5%;
-  background: var(--ink);
 }
 
 .auth-main {
@@ -207,12 +176,12 @@
   }
 
   .auth-brand {
-    inline-size: 9rem;
+    inline-size: min(100%, 19rem);
+    padding: 12px 16px;
   }
 
   .auth-brand-title,
-  .auth-brand-description,
-  .auth-illustration {
+  .auth-brand-description {
     display: none;
   }
 
