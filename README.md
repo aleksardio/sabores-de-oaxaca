@@ -2,6 +2,46 @@
 
 Aplicación web para descubrir, compartir y moderar recetas oaxaqueñas. Incluye catálogo público, detalle con ajuste de porciones, registro e inicio de sesión, favoritos, edición y envío de recetas, moderación, reportes y panel de administración de usuarios, catálogos y recetas. La recuperación de contraseña y las alertas SMS requieren configuración explícita; consultar [limitaciones](#limitaciones-y-pendientes).
 
+## Demostración visual
+
+Capturas de la versión desplegada en [saboresdeoaxaca.food](https://saboresdeoaxaca.food/). La [guía de demostración](docs/DEMONSTRACION.md) reúne los recorridos completos y las comprobaciones pendientes.
+
+### Inicio
+
+El logotipo oficial y la navegación dan acceso al catálogo y a Tradiciones. La portada presenta el proyecto con una receta oaxaqueña; más abajo se muestran recetas destacadas y un acceso a las regiones.
+
+![Portada de Sabores de Oaxaca con el logo, la navegación y una fotografía de tlayuda](docs/capturas/inicio/presentacion-y-navegacion.webp)
+
+### Explorar recetas
+
+El catálogo centrado muestra fotografías de las recetas publicadas. Se puede buscar por título, filtrar por tipo o categoría y avanzar entre páginas.
+
+![Catálogo centrado con barra de búsqueda, filtros y tarjetas de recetas](docs/capturas/explorar/catalogo-centrado.webp)
+
+### Detalle de receta
+
+La ficha muestra la fotografía, la descripción y el autor. Más abajo aparecen los ingredientes con sus cantidades, un selector que recalcula las porciones y la preparación paso a paso.
+
+![Ficha de enfrijoladas oaxaqueñas con tasajo con fotografía, autor y descripción](docs/capturas/receta/ficha-de-enfrijoladas.webp)
+
+### Tradiciones
+
+Un recorrido por la gastronomía oaxaqueña que presenta sus ocho regiones con fotografías y descripciones.
+
+![Presentación de Tradiciones de Oaxaca con fotografía y acceso a las ocho regiones](docs/capturas/tradiciones/presentacion-gastronomica.webp)
+
+### Autenticación y áreas de trabajo
+
+La guía muestra los [formularios de inicio de sesión, registro y recuperación](docs/DEMONSTRACION.md#autenticación), los [favoritos y la revisión de reportes con sesión iniciada](docs/DEMONSTRACION.md#usuario-registrado), las [recetas propias y el editor de cocinero](docs/DEMONSTRACION.md#cocinero) y la [cola editorial y el filtro de reportes de moderación](docs/DEMONSTRACION.md#moderador).
+
+### Diseño responsivo
+
+En pantallas estrechas, el catálogo reorganiza las tarjetas en una columna y la ficha apila la fotografía y la descripción. Las siguientes vistas son del mismo catálogo y la misma receta que se muestran arriba en escritorio.
+
+| Catálogo en móvil | Detalle de receta en móvil |
+| :---: | :---: |
+| ![Catálogo móvil con los filtros apilados y la primera tarjeta a ancho de una columna](docs/capturas/movil/catalogo-movil.webp) | ![Ficha móvil de enfrijoladas con fotografía y resumen apilados](docs/capturas/movil/detalle-de-receta-movil.webp) |
+
 ## Tecnologías y arquitectura
 
 - **Frontend:** React 19 y Vite, con cliente HTTP para la API.
@@ -73,7 +113,7 @@ El entorno de despliegue del equipo usa `https://saboresdeoaxaca.food` (frontend
 ## Limitaciones y pendientes
 
 - La recuperación está deshabilitada por defecto. Requiere configuración explícita y un transporte SMTP verificado; el VPS de DigitalOcean tiene salida SMTP restringida. No se garantiza entrega a proveedores externos. Ver [recuperación](backend/docs/RECUPERACION_CONTRASENA_API.md).
-- El aviso SMS por reporte utiliza Infobip, es opcional y está deshabilitado por defecto; su configuración y entrega efectiva dependen del entorno. No existe un endpoint público para enviar SMS. El inicio con Google no está implementado y WhatsApp está fuera del alcance. Ver [configuración SMS](backend/docs/SMS_REPORTES_INFOBIP.md).
+- El aviso SMS por reporte utiliza Infobip, es opcional y está deshabilitado por defecto; su configuración y entrega efectiva dependen del entorno. No existe un endpoint público para enviar SMS. La opción de inicio con Google aparece en el formulario; su flujo no se verificó en esta demostración. WhatsApp está fuera del alcance. Ver [configuración SMS](backend/docs/SMS_REPORTES_INFOBIP.md).
 - Catálogos y recetas del panel administrativo consultan la API. Se retiró el directorio público de autores de demostración; los autores reales de las recetas no se modificaron.
 - Las URL multimedia de los datos ficticios no son imágenes reales. El script demo prepara 13 recetas y 27 ingredientes; falta confirmar los mínimos oficiales de la asignación.
 - Sigue pendiente validar la recuperación de un respaldo MySQL en un esquema aislado, respaldar multimedia, comprobar controles contra abuso y repetir pruebas funcionales después de cada despliegue. No confundir «dump creado» con «restauración comprobada».
