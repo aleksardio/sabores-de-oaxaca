@@ -34,6 +34,14 @@ Un recorrido por la gastronomía oaxaqueña que presenta sus ocho regiones con f
 
 La guía muestra los [formularios de inicio de sesión, registro y recuperación](docs/DEMONSTRACION.md#autenticación), los [favoritos y la revisión de reportes con sesión iniciada](docs/DEMONSTRACION.md#usuario-registrado), las [recetas propias y el editor de cocinero](docs/DEMONSTRACION.md#cocinero) y la [cola editorial y el filtro de reportes de moderación](docs/DEMONSTRACION.md#moderador).
 
+### Administrador
+
+El panel reúne **Usuarios**, **Solicitudes de cocinero**, **Catálogos** y **Recetas**. En el [recorrido administrativo](docs/DEMONSTRACION.md#administrador) se muestran las búsquedas y filtros en producción, los controles de gestión, el acceso denegado sin `ADMIN` y las vistas móviles. Las confirmaciones se abrieron y se cancelaron antes de enviar cambios.
+
+![Panel de administración con los accesos a Usuarios, Solicitudes de cocinero, Catálogos y Recetas](docs/capturas/administrador/panel-y-navegacion.webp)
+
+![Vista previa para asignar el rol MODERADOR a una cuenta de prueba, con opción de cancelar](docs/capturas/administrador/asignar-moderador-confirmacion-previa.webp)
+
 ### Diseño responsivo
 
 En pantallas estrechas, el catálogo reorganiza las tarjetas en una columna y la ficha apila la fotografía y la descripción. Las siguientes vistas son del mismo catálogo y la misma receta que se muestran arriba en escritorio.
@@ -60,9 +68,11 @@ Los roles no son jerárquicos: una cuenta puede tener varios.
 | `USUARIO` | Autenticarse, gestionar favoritos y reportar recetas visibles ajenas. |
 | `COCINERO` | Crear y editar sus borradores o rechazadas, enviar a revisión y subir multimedia. |
 | `MODERADOR` | Revisar recetas y resolver reportes, sin decidir sobre sus propios reportes o recetas. |
-| `ADMIN` | Consultar usuarios, asignar o retirar `COCINERO`, consultar catálogos y administrar bajas y restauraciones de recetas; también puede moderar con las mismas restricciones de conflicto de interés. |
+| `ADMIN` | Consultar y filtrar cuentas, desactivar o reactivar cuentas, asignar o retirar `COCINERO` y `MODERADOR`, resolver solicitudes de `COCINERO`, consultar catálogos de solo lectura y gestionar la baja lógica y restauración de recetas. También puede moderar con las mismas restricciones de conflicto de interés. |
 
 El registro público no concede privilegios administrativos. La edición y las decisiones requieren versiones vigentes cuando el contrato lo indica. Ver [recetas propias](backend/docs/RECETAS_COCINERO_API.md), [moderación](backend/docs/MODERACION_API.md), [reportes](backend/docs/REPORTES_API.md) y [administración](backend/docs/ADMIN_USUARIOS_API.md).
+
+La API impide la autodesactivación y protege al último administrador activo. Desactivar una cuenta revoca sus sesiones; un cambio efectivo de `COCINERO` o `MODERADOR` invalida sus JWT y conserva los demás roles. Las bajas y restauraciones de recetas requieren justificación y una versión vigente. Ver [solicitudes de cocinero](backend/docs/SOLICITUDES_COCINERO_API.md) y [administración de recetas](backend/docs/ADMIN_RECETAS_API.md).
 
 ## Requisitos y ejecución local
 
