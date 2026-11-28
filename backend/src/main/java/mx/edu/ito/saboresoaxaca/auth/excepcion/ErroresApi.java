@@ -17,7 +17,7 @@ import java.util.Map;
 public class ErroresApi {
     @ExceptionHandler({OptimisticLockingFailureException.class, OptimisticLockException.class})
     ResponseEntity<Map<String, Object>> conflictoOptimista() {
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", "Los datos cambiaron; vuelva a consultar"));
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", "Los datos cambiaron; vuelva a consultar", "codigo", "CONFLICTO_CONCURRENCIA"));
     }
     @ExceptionHandler(BadCredentialsException.class)
     ResponseEntity<Map<String, Object>> credencialesInvalidas() {

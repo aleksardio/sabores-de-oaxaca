@@ -20,6 +20,49 @@ const listing = (pagina = 0, contenido = [ana], totalElementos = 21) => ({
   pagina, contenido, totalElementos, tamano: 20, totalPaginas: Math.ceil(totalElementos / 20),
 })
 
+test('409 conocidos presentan mensajes seguros y reconsultan; códigos ajenos no se muestran', async (t) => {
+  let codigo = ''
+  const { service } = await setup(t, (_path, init) => init.method === 'GET'
+    ? Response.json(ana) : Response.json({ codigo, error: 'SQL privado' }, { status: 409 }))
+  for (const [value, text] of [
+    ['CUENTA_INACTIVA', 'La cuenta está inactiva'],
+    ['AUTODESACTIVACION', 'No puedes desactivar tu propia cuenta'],
+    ['ULTIMO_ADMIN', 'Debe permanecer al menos un administrador activo'],
+    ['CONFLICTO_CONCURRENCIA', 'Los datos cambiaron durante la operación'],
+  ]) {
+    codigo = value
+    const result = await service.changeAccountState(ana, confirmed)
+    assert.match(result.conflictMessage, new RegExp(text))
+    assert.deepEqual(result.account, ana)
+  }
+  codigo = 'SQL privado'
+  const result = await service.changeAccountState(ana, confirmed)
+  assert.equal(result.conflictMessage, undefined)
+})
+
+test('confirmación y reconsulta para moderador y estado de cuenta', async (t) => {
+  let actual = ana
+  const { calls, service } = await setup(t, (_path, init) => {
+    if (init.method === 'PUT') { actual = { ...ana, roles: ['USUARIO', 'MODERADOR'] }; return response(204) }
+    if (init.method === 'DELETE') { actual = ana; return response(204) }
+    if (init.method === 'POST') { actual = { ...actual, activo: !actual.activo }; return response(204) }
+    return Response.json(actual)
+  })
+  await assert.rejects(service.changeModeratorRole(ana), { status: 400 })
+  let resultado = await service.changeModeratorRole(ana, confirmed)
+  assert.deepEqual(resultado.account.roles, ['USUARIO', 'MODERADOR'])
+  assert.equal(calls[0][0], `${base}/12/roles/moderador`)
+  resultado = await service.changeModeratorRole(resultado.account, confirmed)
+  assert.deepEqual(resultado.account.roles, ['USUARIO'])
+  resultado = await service.changeAccountState(resultado.account, confirmed)
+  assert.equal(resultado.account.activo, false)
+  await assert.rejects(service.changeModeratorRole(resultado.account, confirmed), { status: 409 })
+  resultado = await service.changeAccountState(resultado.account, confirmed)
+  assert.equal(resultado.account.activo, true)
+  assert.ok(calls.some(([path]) => path.endsWith('/desactivar')))
+  assert.ok(calls.some(([path]) => path.endsWith('/reactivar')))
+})
+
 async function setup(t, handler, profile = admin) {
   const session = createAuthSession()
   t.after(session.dispose)
