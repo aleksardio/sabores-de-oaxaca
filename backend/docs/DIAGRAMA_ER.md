@@ -24,6 +24,9 @@ erDiagram
     USUARIOS o|--o{ AUDITORIA_ADMINISTRATIVA : afectado
     RECETAS o|--o{ AUDITORIA_ADMINISTRATIVA : afectada
     ROLES o|--o{ AUDITORIA_ADMINISTRATIVA : involucrado
+    USUARIOS ||--o{ SOLICITUDES_COCINERO : solicita
+    USUARIOS o|--o{ SOLICITUDES_COCINERO : resuelve
+    USUARIOS ||--o| IDENTIDADES_GOOGLE : vincula
 
     USUARIOS {
         bigint id PK
@@ -120,4 +123,21 @@ erDiagram
         datetime usado_en
         datetime invalidado_en
     }
+    SOLICITUDES_COCINERO {
+        bigint id PK
+        bigint usuario_id FK
+        varchar estado
+        datetime creada_en
+        datetime resuelta_en
+        bigint resuelta_por FK
+        bigint usuario_pendiente UK
+    }
+    IDENTIDADES_GOOGLE {
+        bigint id PK
+        bigint usuario_id FK,UK
+        varchar google_sub UK
+        datetime creado_en
+    }
 ```
+
+`usuarios_roles`, `recetas_ingredientes`, `recetas_categorias` y `favoritos` son tablas intermedias de relaciones N:M. La identidad Google es opcional y única por usuario. La solicitud tiene un solicitante obligatorio y un administrador resolutor opcional mientras está pendiente. Las columnas mostradas son una selección; las migraciones V1–V9 son la fuente normativa.
