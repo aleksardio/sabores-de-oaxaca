@@ -409,8 +409,9 @@ o incierto pide iniciar sesión de nuevo para consultar los permisos actuales;
 la salida local no revoca sesiones en el servidor. Para comprobar desde la
 interfaz el acceso de otra cuenta tras un cambio, inicia sesión de nuevo en
 ella: la sesión del frontend carga los roles desde `/auth/me` al entrar.
-No hay acciones reales para otros roles, bajas ni reactivaciones de cuentas.
-El backend **no genera todavía auditoría específica** de estos cambios.
+El detalle también permite gestionar MODERADOR y desactivar o reactivar cuentas
+con confirmación. Los cambios efectivos revocan las sesiones afectadas y se
+registran en auditoría; no se ofrece la asignación del rol ADMIN.
 
 Contrato: [ADMIN_USUARIOS_API.md](../backend/docs/ADMIN_USUARIOS_API.md).
 Las recetas usan el [contrato administrativo](../backend/docs/ADMIN_RECETAS_API.md):

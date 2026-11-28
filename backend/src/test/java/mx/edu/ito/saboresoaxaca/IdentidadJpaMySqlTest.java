@@ -58,7 +58,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @EnabledIfSystemProperty(named = "jpa.mysql.it", matches = "true")
 class IdentidadJpaMySqlTest {
     private static final org.springframework.mail.javamail.JavaMailSender correoSimulado = org.mockito.Mockito.mock(org.springframework.mail.javamail.JavaMailSender.class);
-    private static ConfigurableApplicationContext context;
+    static ConfigurableApplicationContext context;
     private static TransactionTemplate tx;
     private static EntityManager em;
     private static UsuarioRepositorio usuarios;
@@ -187,10 +187,12 @@ class IdentidadJpaMySqlTest {
     void hibernateValidaYFlywayAplicaSoloLasMigracionesPrevistas() {
         assertEquals("validate", context.getEnvironment().getProperty("spring.jpa.hibernate.ddl-auto"));
         tx.executeWithoutResult(status -> {
-            Number migraciones = (Number) em.createNativeQuery("SELECT COUNT(*) FROM flyway_schema_history WHERE success=1 AND version IN ('1','2','3','4','5','6')").getSingleResult();
+            Number migraciones = (Number) em.createNativeQuery("SELECT COUNT(*) FROM flyway_schema_history WHERE success=1 AND version IN ('1','2','3','4','5','6','7','8','9')").getSingleResult();
+            Number totalMigraciones = (Number) em.createNativeQuery("SELECT COUNT(*) FROM flyway_schema_history WHERE version IS NOT NULL").getSingleResult();
             Number tablas = (Number) em.createNativeQuery("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_type='BASE TABLE'").getSingleResult();
-            assertEquals(6, migraciones.intValue());
-            assertEquals(15, tablas.intValue());
+            assertEquals(9, migraciones.intValue());
+            assertEquals(9, totalMigraciones.intValue());
+            assertEquals(17, tablas.intValue());
             status.setRollbackOnly();
         });
     }

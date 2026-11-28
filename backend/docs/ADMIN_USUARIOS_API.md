@@ -1,5 +1,11 @@
 # Administración de usuarios
 
+## Gestión de cuentas y moderadores
+
+`POST /api/v1/admin/usuarios/{id}/desactivar` y `/reactivar` requieren ADMIN y devuelven `204`. La desactivación lógica revoca los JWT existentes y conserva datos y roles; reactivar no revive sesiones anteriores. Se rechaza con `409` la autodesactivación, la pérdida del último administrador activo o una transición redundante. Los cambios y su auditoría son transaccionales.
+
+`PUT` y `DELETE /api/v1/admin/usuarios/{id}/roles/moderador` asignan o retiran MODERADOR a una cuenta activa y devuelven `204`. Tanto estos cambios como los de COCINERO invalidan los JWT cuando el rol cambia; las operaciones redundantes son idempotentes y no invalidan sesiones. No modifican otros roles. `401` indica sesión inválida, `403` falta de ADMIN, `404` cuenta inexistente y `409` cuenta inactiva o conflicto de estado. Al volver a iniciar sesión se consultan los roles actuales.
+
 Base `/api/v1/admin/usuarios`. Todas las operaciones requieren `Authorization: Bearer <JWT>` válido y rol `ADMIN`; `MODERADOR`, `USUARIO` y `COCINERO` sin `ADMIN` reciben `403`, y un token ausente o inválido `401`. Los roles se consultan en MySQL al autenticar cada solicitud. No se modifican contraseñas ni configuraciones JWT.
 
 ## Listado
@@ -22,6 +28,6 @@ Los datos personales están limitados a la información administrativa mostrada.
 * `PUT /{id}/roles/cocinero`: asigna `COCINERO`; `204` sin cuerpo. Si ya estaba asignado, también devuelve `204`.
 * `DELETE /{id}/roles/cocinero`: retira `COCINERO`; `204` sin cuerpo. Si ya estaba ausente, también devuelve `204`.
 
-Las operaciones de rol no aceptan un código proporcionado por el cliente: no existen rutas para asignar `ADMIN` ni `MODERADOR`. Ambas son transaccionales, serializan cambios para el usuario mediante bloqueo de fila y devuelven `404` si no existe o `409` si está inactivo. El retiro no elimina recetas ni otros roles. No se fuerza logout: el siguiente request con un token aún válido consulta los roles actuales. El frontend debe consultar de nuevo el detalle tras la operación.
+Las rutas de rol son fijas y no permiten asignar `ADMIN`. Las operaciones son transaccionales, serializan cambios para el usuario mediante bloqueo de fila y devuelven `404` si no existe o `409` si está inactivo. El retiro no elimina recetas ni otros roles. El frontend consulta de nuevo el detalle tras la operación.
 
-Los cambios de rol no generan actualmente una auditoría específica; definirla por separado antes de utilizar el panel si el despliegue requiere trazabilidad administrativa. Para probar con Bruno: iniciar sesión como administrador, configurar Bearer, consultar el listado y utilizar PUT o DELETE sin cuerpo sobre la ruta fija de cocinero, con un usuario de pruebas.
+Los cambios efectivos de rol y estado registran una fila en `auditoria_administrativa`; cambios redundantes de rol no producen auditoría ni invalidan sesiones. Probar escrituras solo con cuentas de prueba en un entorno aislado.

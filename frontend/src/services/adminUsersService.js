@@ -8,11 +8,18 @@ const base = '/admin/usuarios'
 const writesByUser = new WeakMap()
 const nonnegative = (value) => Number.isSafeInteger(value) && value >= 0
 const isRole = (role) => adminUserRoles.includes(role)
+const conflicts = {
+  CUENTA_INACTIVA: 'La cuenta está inactiva; reactívala antes de cambiar sus roles.',
+  AUTODESACTIVACION: 'No puedes desactivar tu propia cuenta.',
+  ULTIMO_ADMIN: 'Debe permanecer al menos un administrador activo.',
+  CONFLICTO_CONCURRENCIA: 'Los datos cambiaron durante la operación. Consulta el estado actual e inténtalo de nuevo.',
+  ESTADO_SIN_CAMBIOS: 'La cuenta ya tiene ese estado. Consulta el estado actual.',
+}
 const errors = {
   400: 'Los parámetros de administración no son válidos.',
   403: 'Acceso denegado. Se requiere autorización de administrador.',
   404: 'El usuario no existe.',
-  409: 'La cuenta está inactiva. No se pueden cambiar sus roles.',
+  409: 'La operación no está permitida o la cuenta cambió. Consulta el estado actual.',
   500: 'El servidor no pudo completar la solicitud. Inténtalo más tarde.',
 }
 
@@ -37,9 +44,9 @@ export function cookRoleAction(account) {
 }
 
 export const roleRefreshMessages = {
-  confirmed: 'El servidor confirmó el cambio de rol.',
+  confirmed: 'El servidor confirmó el cambio.',
   uncertain: 'No se pudo confirmar la respuesta del cambio.',
-  inactive: 'El servidor rechazó el cambio porque la cuenta estaba inactiva.',
+  inactive: 'El servidor rechazó el cambio por un conflicto o una restricción de seguridad.',
 }
 
 const needsReconciliation = (error) => !(error instanceof ApiError)
@@ -68,15 +75,17 @@ export function createAdminUsersService(requestAuthenticated, user, requireFresh
     return request(pathFor(id), options, (data) => isUser(data) && data.id === id)
   }
 
-  async function writeAndReconcile(account, path) {
+  async function writeAndReconcile(account, path, action = 'COCINERO') {
     let kind = 'confirmed'
+    let conflictMessage
     try {
-      await request(`${path}/roles/cocinero`, {
-        method: account.roles.includes('COCINERO') ? 'DELETE' : 'PUT', expected: 204,
+      const status = action === 'CUENTA'
+      await request(status ? `${path}/${account.activo ? 'desactivar' : 'reactivar'}` : `${path}/roles/${action.toLowerCase()}`, {
+        method: status ? 'POST' : account.roles.includes(action) ? 'DELETE' : 'PUT', expected: 204, conflicts,
       }, (data) => data === undefined)
     } catch (error) {
       if (error.name === 'AbortError') throw error
-      if (error instanceof ApiError && error.status === 409) kind = 'inactive'
+      if (error instanceof ApiError && error.status === 409) { kind = 'inactive'; if (error.message !== errors[409]) conflictMessage = error.message }
       else if (needsReconciliation(error)) kind = 'uncertain'
       else throw error
     }
@@ -84,11 +93,11 @@ export function createAdminUsersService(requestAuthenticated, user, requireFresh
     let refreshPending = false
     try {
       const invalidSession = `${roleRefreshMessages[kind]} La actualización visual está pendiente. Tu sesión ya no es válida. Vuelve a iniciar sesión.`
-      return { kind, account: await readDetail(account.id, { errors: { 401: invalidSession } }) }
+      return { kind, ...(conflictMessage && { conflictMessage }), account: await readDetail(account.id, { errors: { 401: invalidSession } }) }
     } catch (error) {
       if (error.name === 'AbortError' || error.status === 401) throw error
       refreshPending = true
-      return { kind, error }
+      return { kind, ...(conflictMessage && { conflictMessage }), error }
     } finally {
       if (user.id === account.id && kind !== 'inactive') {
         const pending = refreshPending ? ' La actualización visual está pendiente.' : ''
@@ -138,5 +147,21 @@ export function createAdminUsersService(requestAuthenticated, user, requireFresh
         writes.delete(account.id)
       }
     },
+    async changeModeratorRole(account, { confirmed = false } = {}) {
+      return change(account, confirmed, 'MODERADOR')
+    },
+    async changeAccountState(account, { confirmed = false } = {}) {
+      return change(account, confirmed, 'CUENTA')
+    },
+  }
+
+  async function change(account, confirmed, action) {
+    if (!confirmed || !isUser(account)) throw new ApiError(400, 'Consulta la cuenta y confirma el cambio.')
+    if (action !== 'CUENTA' && !account.activo) throw new ApiError(409, errors[409])
+    const path = pathFor(account.id)
+    if (writes.has(account.id)) throw new ApiError(409, 'Ya hay un cambio en curso.')
+    const submission = writeAndReconcile(account, path, action)
+    writes.set(account.id, submission)
+    try { return await submission } finally { writes.delete(account.id) }
   }
 }

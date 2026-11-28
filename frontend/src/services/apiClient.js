@@ -19,7 +19,7 @@ export class ApiError extends Error {
   }
 }
 
-export async function apiRequest(path, { method = 'GET', body, token, signal, errors, expected = 200, ifMatch, badRequest } = {}) {
+export async function apiRequest(path, { method = 'GET', body, token, signal, errors, expected = 200, ifMatch, badRequest, conflicts } = {}) {
   const headers = { Accept: 'application/json' }
   const multipart = typeof FormData !== 'undefined' && body instanceof FormData
   if (body !== undefined && !multipart) headers['Content-Type'] = 'application/json'
@@ -49,7 +49,7 @@ export async function apiRequest(path, { method = 'GET', body, token, signal, er
   if (response.status === 204) return
 
   let data
-  if (response.ok || response.status === 400) {
+  if (response.ok || response.status === 400 || (response.status === 409 && conflicts)) {
     try {
       data = await response.json()
     } catch {
@@ -70,7 +70,8 @@ export async function apiRequest(path, { method = 'GET', body, token, signal, er
   }
   throw new ApiError(
     response.status,
-    errors?.[response.status] ?? messages[response.status] ?? 'El servidor no pudo completar la operación. Comprueba que la API esté disponible.',
+    (response.status === 409 && typeof data?.codigo === 'string' && Object.hasOwn(conflicts ?? {}, data.codigo) ? conflicts[data.codigo] : undefined)
+      ?? errors?.[response.status] ?? messages[response.status] ?? 'El servidor no pudo completar la operación. Comprueba que la API esté disponible.',
     fields,
   )
 }

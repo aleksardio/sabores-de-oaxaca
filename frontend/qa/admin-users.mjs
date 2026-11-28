@@ -29,6 +29,7 @@ async function scenario(width) {
   let account
   let listUnavailable = true
   let afterWriteFailure = false
+  let conflictNext = false
   let releasePut
   const putGate = new Promise((resolve) => { releasePut = resolve })
   page.on('pageerror', (error) => errors.push(error.message))
@@ -91,6 +92,15 @@ async function scenario(width) {
         account.roles = ['USUARIO']
         return route.abort('connectionreset')
       }
+    }
+    if (pathname === `${base}/22/roles/moderador`) {
+      if (conflictNext) { conflictNext = false; return send(409, { codigo: 'CUENTA_INACTIVA', error: 'SQL privado' }) }
+      account.roles = method === 'PUT' ? [...account.roles, 'MODERADOR'] : account.roles.filter((role) => role !== 'MODERADOR')
+      return send(204)
+    }
+    if (pathname === `${base}/22/desactivar` || pathname === `${base}/22/reactivar`) {
+      account.activo = pathname.endsWith('/reactivar')
+      return send(204)
     }
     if (pathname.startsWith(base)) return send(404)
     return send(404)
@@ -187,12 +197,32 @@ async function scenario(width) {
     await page.getByText(/No se pudo confirmar.*Se consultó el estado actual/u).waitFor()
     await button('Asignar rol COCINERO').waitFor()
 
+    conflictNext = true
+    await button('Asignar rol MODERADOR').click()
+    await button('Confirmar cambio').click()
+    await page.getByText(/La cuenta está inactiva; reactívala antes de cambiar sus roles/).waitFor()
+    assert.equal(await page.getByText('SQL privado').count(), 0)
+    await button('Asignar rol MODERADOR').waitFor()
+
+    for (const label of ['Asignar rol MODERADOR', 'Retirar rol MODERADOR', 'Desactivar cuenta', 'Reactivar cuenta']) {
+      const before = writes().length
+      await button(label).click()
+      await button('Cancelar').click()
+      assert.equal(writes().length, before)
+      await button(label).click()
+      await button('Confirmar cambio').click()
+      await page.getByText(/El servidor confirmó.*Se consultó el estado actual/u).waitFor()
+      assert.equal(writes().length, before + 1)
+    }
+    await button('Asignar rol MODERADOR').waitFor()
+    await button('Desactivar cuenta').waitFor()
+
     await page.goto(`${site}/login`)
     await login(anaEmail)
     await myRecipes().click()
     await page.getByText(/Modo lectura/u).waitFor()
     assert.equal(await link('Crear receta').count(), 0)
-    assert.deepEqual(writes().map(({ method }) => method), ['PUT', 'DELETE'])
+    assert.deepEqual(writes().map(({ method }) => method), ['PUT', 'DELETE', 'PUT', 'PUT', 'DELETE', 'POST', 'POST'])
     assert.deepEqual(errors, [])
     console.log(`Chromium ${width}px: registro, permisos, paginación, confirmación, reconsulta y retiro verificados.`)
   } finally {

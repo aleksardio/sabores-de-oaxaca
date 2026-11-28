@@ -113,11 +113,11 @@ class MySqlIntegridadTest {
         try (Statement s = db.createStatement(); ResultSet r = s.executeQuery("SELECT table_name FROM information_schema.tables WHERE table_schema=DATABASE() AND table_type='BASE TABLE'")) {
             while (r.next()) tablas.add(r.getString(1).toLowerCase());
         }
-        assertEquals(Set.of("usuarios", "roles", "usuarios_roles", "ingredientes", "categorias", "recetas", "recetas_ingredientes", "recetas_categorias", "recetas_multimedia", "favoritos", "reportes", "auditoria_moderacion", "auditoria_administrativa", "recuperaciones_contrasena", "flyway_schema_history"), tablas);
+        assertEquals(Set.of("usuarios", "roles", "usuarios_roles", "ingredientes", "categorias", "recetas", "recetas_ingredientes", "recetas_categorias", "recetas_multimedia", "favoritos", "reportes", "auditoria_moderacion", "auditoria_administrativa", "recuperaciones_contrasena", "solicitudes_cocinero", "identidades_google", "flyway_schema_history"), tablas);
         try (Statement s = db.createStatement(); ResultSet r = s.executeQuery("SELECT version, success FROM flyway_schema_history WHERE version IS NOT NULL")) {
             Set<String> versiones = new HashSet<>();
             while (r.next()) { assertTrue(r.getBoolean(2)); assertTrue(versiones.add(r.getString(1))); }
-            assertEquals(Set.of("1", "2", "3", "4", "5", "6", "7"), versiones);
+            assertEquals(Set.of("1", "2", "3", "4", "5", "6", "7", "8", "9"), versiones);
         }
         try (Statement s = db.createStatement(); ResultSet r = s.executeQuery("SELECT codigo FROM roles")) {
             Set<String> roles = new HashSet<>();

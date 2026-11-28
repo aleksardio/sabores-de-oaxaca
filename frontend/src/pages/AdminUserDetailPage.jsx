@@ -13,11 +13,11 @@ function AdminUserDetail({ id }) {
   const { user, requestAuthenticated, requireFreshSignIn } = useAuth()
   const [result, setResult] = useState({})
   const [attempt, setAttempt] = useState(0)
-  const [confirmation, setConfirmation] = useState(false)
+  const [confirmation, setConfirmation] = useState('')
   const [saving, setSaving] = useState(false)
   const readScope = useRef(null)
   const writing = useRef(false)
-  const { account, error, kind, writeError } = result
+  const { account, error, kind, writeError, conflictMessage } = result
   const label = cookRoleAction(account)
   const date = account && adminRegistrationUtc(account.creadoEn)
 
@@ -42,14 +42,17 @@ function AdminUserDetail({ id }) {
 
   async function saveRole() {
     const signal = readScope.current
-    if (!signal || signal.aborted || writing.current || !confirmation || !label) return
+    if (!signal || signal.aborted || writing.current || !confirmation) return
     writing.current = true
     setSaving(true)
-    setConfirmation(false)
+    const action = confirmation
+    setConfirmation('')
     setResult({ account })
     try {
-      const next = await createAdminUsersService(requestAuthenticated, user, requireFreshSignIn)
-        .changeCookRole(account, { confirmed: true })
+      const service = createAdminUsersService(requestAuthenticated, user, requireFreshSignIn)
+      const next = await (action === 'CUENTA' ? service.changeAccountState(account, { confirmed: true })
+        : action === 'MODERADOR' ? service.changeModeratorRole(account, { confirmed: true })
+          : service.changeCookRole(account, { confirmed: true }))
       if (!signal.aborted) setResult(next)
     } catch (error) {
       if (!signal.aborted && error.name !== 'AbortError' && error.status !== 401) {
@@ -72,7 +75,7 @@ function AdminUserDetail({ id }) {
       {id !== null && !account && !error && !writeError && <p role="status">Cargando usuario…</p>}
       {saving && <p role="status">Enviando el cambio y consultando el estado de la cuenta…</p>}
       {kind && (
-        <p role="status">{roleRefreshMessages[kind]} {error ? 'La actualización visual está pendiente.'
+        <p role="status">{conflictMessage || roleRefreshMessages[kind]} {error ? 'La actualización visual está pendiente.'
           : account ? 'Se consultó el estado actual de la cuenta.' : 'Consultando el estado de la cuenta…'}</p>
       )}
       {(error || writeError) && (
@@ -95,22 +98,31 @@ function AdminUserDetail({ id }) {
             </dl>
           </section>
           <section className="cook-panel admin-form" aria-labelledby="admin-cook-role">
-            <h2 id="admin-cook-role">Rol COCINERO</h2>
+            <h2 id="admin-cook-role">Administración de roles</h2>
             <p>Retirar COCINERO no elimina recetas ni modifica otros roles.</p>
             {account.id === user.id && <p>Si cambias tu propio rol, tendrás que iniciar sesión de nuevo para consultar tus permisos actuales.</p>}
-            {!label ? <p>No se pueden cambiar los roles de una cuenta inactiva.</p> : confirmation ? (
+            {!label ? <p>No se pueden cambiar los roles de una cuenta inactiva.</p> : confirmation && confirmation !== 'CUENTA' ? (
               <div className="admin-note">
-                <p>¿Confirmas el cambio «{label}» para {account.nombreVisible} ({account.correo})?</p>
+                <p>¿Confirmas {confirmation === 'COCINERO' ? label : `${account.roles.includes('MODERADOR') ? 'Retirar' : 'Asignar'} rol MODERADOR`} para {account.nombreVisible}?</p>
                 <div className="cook-actions">
                   <button className="site-button site-button--green" type="button" onClick={saveRole}>Confirmar cambio</button>
-                  <button className="site-button" type="button" onClick={() => setConfirmation(false)}>Cancelar</button>
+                  <button className="site-button" type="button" onClick={() => setConfirmation('')}>Cancelar</button>
                 </div>
               </div>
             ) : (
               <div className="cook-actions">
-                <button className="site-button" type="button" disabled={saving} onClick={() => setConfirmation(true)}>{label}</button>
+                <button className="site-button" type="button" disabled={saving || Boolean(confirmation)} onClick={() => setConfirmation('COCINERO')}>{label}</button>
+                <button className="site-button" type="button" disabled={saving || Boolean(confirmation)} onClick={() => setConfirmation('MODERADOR')}>{account.roles.includes('MODERADOR') ? 'Retirar' : 'Asignar'} rol MODERADOR</button>
               </div>
             )}
+          </section>
+          <section className="cook-panel admin-form" aria-labelledby="admin-account-state">
+            <h2 id="admin-account-state">Administración de cuenta</h2>
+            <p>La desactivación conserva los datos y revoca las sesiones existentes.</p>
+            {account.id === user.id && account.activo ? <p>No puedes desactivar tu propia cuenta.</p> : confirmation === 'CUENTA' ? <div className="admin-note">
+              <p>¿Confirmas {account.activo ? 'desactivar' : 'reactivar'} la cuenta de {account.nombreVisible}?</p>
+              <div className="cook-actions"><button className="site-button site-button--green" type="button" disabled={saving} onClick={saveRole}>Confirmar cambio</button><button className="site-button" type="button" disabled={saving} onClick={() => setConfirmation('')}>Cancelar</button></div>
+            </div> : <button className="site-button" type="button" disabled={saving || Boolean(confirmation)} onClick={() => setConfirmation('CUENTA')}>{account.activo ? 'Desactivar cuenta' : 'Reactivar cuenta'}</button>}
           </section>
         </>
       )}

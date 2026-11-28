@@ -76,6 +76,15 @@ public class Usuario {
     public LocalDateTime getCreadoEn() { return creadoEn; }
     public LocalDateTime getActualizadoEn() { return actualizadoEn; }
     public LocalDateTime getEliminadoEn() { return eliminadoEn; }
+    public void invalidarSesiones(LocalDateTime ahora) {
+        if (versionTokens == Long.MAX_VALUE) throw new IllegalStateException("Versión de tokens agotada");
+        versionTokens++;
+        actualizadoEn = ahora;
+    }
+    public void cambiarEstadoCuenta(boolean activa, LocalDateTime ahora) {
+        eliminadoEn = activa ? null : ahora;
+        if (!activa) invalidarSesiones(ahora); else actualizadoEn = ahora;
+    }
     public void restablecerContrasena(String hash, LocalDateTime ahora) {
         if (versionTokens == Long.MAX_VALUE) throw new IllegalStateException("Versión de tokens agotada");
         this.contrasenaHash = Objects.requireNonNull(hash);
